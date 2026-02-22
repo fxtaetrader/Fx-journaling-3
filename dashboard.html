@@ -3723,77 +3723,7 @@
                                 <label><i class="far fa-clock"></i> Time</label>
                                 <input type="time" id="tradeTime" class="premium-input" required>
                             </div>
-                            <div class="form-group-premium">
-                                <label><i class="fas fa-globe"></i> Pair</label>
-                                <select id="currencyPair" class="premium-select">
-                                    <!-- MAJOR FOREX PAIRS -->
-                                    <optgroup label="Forex (Majors)">
-                                        <option value="EUR/USD">EUR/USD</option>
-                                        <option value="GBP/USD">GBP/USD</option>
-                                        <option value="USD/JPY">USD/JPY</option>
-                                        <option value="USD/CHF">USD/CHF</option>
-                                        <option value="USD/CAD">USD/CAD</option>
-                                        <option value="AUD/USD">AUD/USD</option>
-                                        <option value="NZD/USD">NZD/USD</option>
-                                    </optgroup>
-                                    <!-- MINOR FOREX PAIRS -->
-                                    <optgroup label="Forex (Minors)">
-                                        <option value="EUR/GBP">EUR/GBP</option>
-                                        <option value="EUR/JPY">EUR/JPY</option>
-                                        <option value="EUR/CHF">EUR/CHF</option>
-                                        <option value="EUR/AUD">EUR/AUD</option>
-                                        <option value="EUR/CAD">EUR/CAD</option>
-                                        <option value="EUR/NZD">EUR/NZD</option>
-                                        <option value="GBP/JPY">GBP/JPY</option>
-                                        <option value="GBP/CHF">GBP/CHF</option>
-                                        <option value="GBP/AUD">GBP/AUD</option>
-                                        <option value="GBP/CAD">GBP/CAD</option>
-                                        <option value="GBP/NZD">GBP/NZD</option>
-                                        <option value="AUD/JPY">AUD/JPY</option>
-                                        <option value="AUD/CAD">AUD/CAD</option>
-                                        <option value="AUD/CHF">AUD/CHF</option>
-                                        <option value="AUD/NZD">AUD/NZD</option>
-                                        <option value="CAD/JPY">CAD/JPY</option>
-                                        <option value="CAD/CHF">CAD/CHF</option>
-                                        <option value="CHF/JPY">CHF/JPY</option>
-                                        <option value="NZD/JPY">NZD/JPY</option>
-                                        <option value="NZD/CAD">NZD/CAD</option>
-                                        <option value="NZD/CHF">NZD/CHF</option>
-                                    </optgroup>
-                                    <!-- METALS -->
-                                    <optgroup label="Metals">
-                                        <option value="XAU/USD">XAU/USD (Gold)</option>
-                                        <option value="XAG/USD">XAG/USD (Silver)</option>
-                                        <option value="XPT/USD">XPT/USD (Platinum)</option>
-                                        <option value="XPD/USD">XPD/USD (Palladium)</option>
-                                    </optgroup>
-                                    <!-- INDICES -->
-                                    <optgroup label="Indices">
-                                        <option value="NAS100">NAS100 (Nasdaq 100)</option>
-                                        <option value="US30">US30 (Dow Jones)</option>
-                                        <option value="SPX500">SPX500 (S&P 500)</option>
-                                        <option value="UK100">UK100 (FTSE 100)</option>
-                                        <option value="GER40">GER40 (DAX 40)</option>
-                                        <option value="FRA40">FRA40 (CAC 40)</option>
-                                        <option value="JP225">JP225 (Nikkei 225)</option>
-                                        <option value="HK50">HK50 (Hang Seng)</option>
-                                        <option value="AUS200">AUS200 (ASX 200)</option>
-                                    </optgroup>
-                                    <!-- OIL + ENERGY -->
-                                    <optgroup label="Oil & Energy">
-                                        <option value="USOIL">USOIL (WTI Crude)</option>
-                                        <option value="UKOIL">UKOIL (Brent Crude)</option>
-                                        <option value="NATGAS">NATGAS (Natural Gas)</option>
-                                    </optgroup>
-                                    <!-- CRYPTO -->
-                                    <optgroup label="Crypto">
-                                        <option value="BTC/USD">BTC/USD (Bitcoin)</option>
-                                        <option value="ETH/USD">ETH/USD (Ethereum)</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                        </div>
-                        
+                            
                             <div class="form-group-premium">
                                 <label><i class="fas fa-arrows-left-right"></i> Direction</label>
                                 <select id="tradeDirection" class="premium-select" required>
@@ -3802,7 +3732,15 @@
                                 </select>
                             </div>
                         </div>
-
+                         <div class="form-group-premium">
+                                <label><i class="fas fa-globe"></i> Pair</label>
+                                <select id="currencyPair" class="premium-select">
+                                    <option value="EUR/USD">EUR/USD</option>
+                                    <option value="GBP/USD">GBP/USD</option>
+                                    <option value="USD/JPY">USD/JPY</option>
+                                    <option value="XAU/USD">XAU/USD (Gold)</option>
+                                </select>
+                            </div>
                         <div class="form-row-3">
                             <div class="form-group-premium">
                                 <label><i class="fas fa-hashtag"></i> Trade #</label>
