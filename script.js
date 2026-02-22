@@ -2254,177 +2254,142 @@ window.showToast = showToast;
     console.log('✅ Emergency loader fix installed');
 })();
 
-// ===== 🔥 ULTIMATE FIX FOR DEPOSIT ISSUE - ADD AT THE VERY END OF SCRIPT.JS =====
-// This completely overrides ALL deposit logic to work EXACTLY as you want:
-// Deposit amount = Starting Balance = Current Balance (no doubling!)
+// ===== SAFE DEPOSIT FIX - ADD AT THE VERY END OF SCRIPT.JS =====
+// This fixes the deposit issue without breaking anything else
 
 (function() {
-    console.log('🔥 INSTALLING ULTIMATE DEPOSIT FIX...');
+    console.log('🔧 Installing safe deposit fix...');
     
-    // Store original functions
-    const originalUpdateAccountBalance = window.updateAccountBalanceDisplay;
-    
-    // COMPLETELY REPLACE the processDeposit function
-    window.processDeposit = function() {
-        console.log('💰 DEPOSIT FIX ACTIVE: Amount becomes starting balance');
+    // Wait for everything to load
+    setTimeout(function() {
         
-        // Get form values
-        const date = document.getElementById('depositDate')?.value;
-        const time = document.getElementById('depositTime')?.value;
-        const broker = document.getElementById('depositBroker')?.value;
-        const amount = parseFloat(document.getElementById('depositAmount')?.value);
-        const notes = document.getElementById('depositNotes')?.value;
+        // Store the original function
+        const originalProcessDeposit = window.processDeposit;
         
-        // Validate
-        if (!date || !time || !broker || isNaN(amount) || amount <= 0) {
-            showToast('Please fill all fields with valid amount', 'error');
-            return false;
-        }
-        
-        // CRITICAL: The deposit amount becomes the starting balance (NOT added!)
-        const oldBalance = window.startingBalance;
-        window.startingBalance = amount; // ← THIS IS THE KEY - REPLACE, don't add
-        window.saveStartingBalance();
-        
-        // Create deposit record
-        const deposit = {
-            id: Date.now(),
-            date,
-            time,
-            broker,
-            amount: amount,
-            notes: notes || 'Deposit',
-            balanceBefore: oldBalance,
-            balanceAfter: amount, // New balance is exactly the deposit amount
-            type: 'deposit'
-        };
-        
-        // IMPORTANT: Clear old deposits and keep only this one
-        // (since each deposit resets the starting balance)
-        window.deposits = [deposit];
-        window.saveDeposits();
-        
-        // Optional: Clear trades if you want a fresh start with each deposit
-        // Uncomment these lines if you want trades cleared too:
-        // window.trades = [];
-        // window.saveTrades();
-        
-        // Force balance recalculation
-        window.accountBalance = window.startingBalance;
-        
-        // Update ALL displays
-        const balanceElements = [
-            'accountBalance', 
-            'sidebarBalance', 
-            'accountBalanceDisplay',
-            'startingBalanceDisplay'
-        ];
-        
-        balanceElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = `$${amount.toFixed(2)}`;
-        });
-        
-        // Update totals
-        const totalDepositsEl = document.getElementById('totalDepositsDisplay');
-        if (totalDepositsEl) totalDepositsEl.textContent = `$${amount.toFixed(2)}`;
-        
-        const totalWithdrawalsEl = document.getElementById('totalWithdrawalsDisplay');
-        if (totalWithdrawalsEl) totalWithdrawalsEl.textContent = '$0.00';
-        
-        // Update growth displays
-        const totalGrowthEl = document.getElementById('totalGrowth');
-        if (totalGrowthEl) totalGrowthEl.textContent = '$0.00';
-        
-        const growthPercentageEl = document.getElementById('growthPercentage');
-        if (growthPercentageEl) growthPercentageEl.textContent = '0%';
-        
-        // Update recent activity
-        window.updateRecentActivity();
-        
-        // Update transaction history
-        window.updateTransactionHistory();
-        
-        // Update charts if they exist
-        if (window.equityChart) {
-            window.updateEquityChart('12m');
-        }
-        
-        // Clear form
-        document.getElementById('depositAmount').value = '';
-        document.getElementById('depositNotes').value = '';
-        document.getElementById('newBalanceAfterDeposit').value = amount.toFixed(2);
-        
-        showToast(`✅ Starting Balance set to $${amount.toFixed(2)}!`, 'success');
-        console.log(`✅ DEPOSIT FIX: Balance set to $${amount} (was $${oldBalance})`);
-        return true;
-    };
-    
-    // Fix the deposit amount input preview
-    const depositAmountField = document.getElementById('depositAmount');
-    if (depositAmountField) {
-        depositAmountField.addEventListener('input', function() {
-            const val = parseFloat(this.value) || 0;
-            const preview = document.getElementById('newBalanceAfterDeposit');
-            if (preview) preview.value = val.toFixed(2);
-        });
-    }
-    
-    // Override the balance update function to ensure it uses starting balance only
-    window.updateAccountBalanceDisplay = function() {
-        console.log('💰 Using FIXED balance calculation');
-        
-        // CRITICAL: Current balance = starting balance (deposit amount)
-        // NOT starting balance + deposits - withdrawals + P&L
-        window.accountBalance = window.startingBalance;
-        
-        // Update all balance displays
-        const elements = {
-            'accountBalance': window.accountBalance,
-            'sidebarBalance': window.accountBalance,
-            'accountBalanceDisplay': window.accountBalance,
-            'startingBalanceDisplay': window.startingBalance,
-            'totalDepositsDisplay': window.deposits.reduce((s, d) => s + d.amount, 0),
-            'totalWithdrawalsDisplay': window.withdrawals.reduce((s, w) => s + w.amount, 0),
-            'totalGrowth': window.accountBalance - window.startingBalance,
-            'equityTotal': window.accountBalance
-        };
-        
-        for (let [id, value] of Object.entries(elements)) {
-            const el = document.getElementById(id);
-            if (el) {
-                if (id.includes('totalGrowth')) {
-                    el.textContent = (value >= 0 ? '+' : '-') + '$' + Math.abs(value).toFixed(2);
+        // Replace with fixed version
+        window.processDeposit = function() {
+            console.log('💰 Processing deposit with FIXED logic');
+            
+            // Get form values
+            const date = document.getElementById('depositDate')?.value;
+            const time = document.getElementById('depositTime')?.value;
+            const broker = document.getElementById('depositBroker')?.value;
+            const amount = parseFloat(document.getElementById('depositAmount')?.value);
+            const notes = document.getElementById('depositNotes')?.value;
+            
+            // Validate
+            if (!date || !time || !broker || isNaN(amount) || amount <= 0) {
+                if (typeof showToast === 'function') {
+                    showToast('Please fill all fields with valid amount', 'error');
                 } else {
-                    el.textContent = '$' + value.toFixed(2);
+                    alert('Please fill all fields with valid amount');
                 }
+                return false;
             }
+            
+            try {
+                // Get current user data
+                const currentUser = JSON.parse(localStorage.getItem('fxTaeCurrentUser') || '{}');
+                const userId = currentUser.id || 'default';
+                
+                // CRITICAL: Set starting balance to deposit amount (NOT add)
+                const startingBalanceKey = 'fxTaeStartingBalance';
+                localStorage.setItem(startingBalanceKey, amount.toString());
+                
+                // Create deposit record
+                const depositsKey = 'fxTaeDeposits';
+                const newDeposit = {
+                    id: Date.now(),
+                    date: date,
+                    time: time,
+                    broker: broker,
+                    amount: amount,
+                    notes: notes || 'Deposit',
+                    balanceBefore: 0,
+                    balanceAfter: amount
+                };
+                
+                // Save deposit (replace old ones)
+                localStorage.setItem(depositsKey, JSON.stringify([newDeposit]));
+                
+                // Clear trades if you want a fresh start (optional)
+                // localStorage.setItem('fxTaeTrades', JSON.stringify([]));
+                
+                // Clear withdrawals if you want a fresh start (optional)
+                // localStorage.setItem('fxTaeWithdrawals', JSON.stringify([]));
+                
+                // Update all balance displays
+                const balanceElements = [
+                    'accountBalance',
+                    'sidebarBalance',
+                    'accountBalanceDisplay',
+                    'startingBalanceDisplay',
+                    'totalDepositsDisplay'
+                ];
+                
+                balanceElements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (id === 'totalDepositsDisplay') {
+                            el.textContent = '$' + amount.toFixed(2);
+                        } else if (id === 'startingBalanceDisplay') {
+                            el.textContent = '$' + amount.toFixed(2);
+                        } else {
+                            el.textContent = '$' + amount.toFixed(2);
+                        }
+                    }
+                });
+                
+                // Clear form
+                const amountInput = document.getElementById('depositAmount');
+                if (amountInput) amountInput.value = '';
+                
+                const notesInput = document.getElementById('depositNotes');
+                if (notesInput) notesInput.value = '';
+                
+                const newBalanceInput = document.getElementById('newBalanceAfterDeposit');
+                if (newBalanceInput) newBalanceInput.value = amount.toFixed(2);
+                
+                // Show success message
+                if (typeof showToast === 'function') {
+                    showToast('✅ Deposit successful! Balance: $' + amount.toFixed(2), 'success');
+                } else {
+                    alert('Deposit successful! Balance: $' + amount.toFixed(2));
+                }
+                
+                // Reload the page to refresh all data (safest approach)
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Deposit error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('Error processing deposit', 'error');
+                } else {
+                    alert('Error processing deposit');
+                }
+                return false;
+            }
+        };
+        
+        // Fix the preview when typing amount
+        const depositAmountField = document.getElementById('depositAmount');
+        if (depositAmountField) {
+            depositAmountField.addEventListener('input', function() {
+                const val = parseFloat(this.value) || 0;
+                const preview = document.getElementById('newBalanceAfterDeposit');
+                if (preview) {
+                    preview.value = val.toFixed(2);
+                }
+            });
         }
         
-        const growthPercent = window.startingBalance > 0 ? 
-            ((window.accountBalance - window.startingBalance) / window.startingBalance * 100).toFixed(1) : 0;
-        const growthPercentEl = document.getElementById('growthPercentage');
-        if (growthPercentEl) {
-            growthPercentEl.textContent = (growthPercent > 0 ? '+' : '') + growthPercent + '%';
-        }
-    };
+        console.log('✅ Safe deposit fix installed!');
+        console.log('📝 Deposit $100 → Balance shows $100 (not $200)');
+        
+    }, 1000); // Wait 1 second for everything to load
     
-    // Force immediate fix if we're on the deposits page
-    setTimeout(() => {
-        console.log('🔄 Applying deposit fix to current page...');
-        if (window.startingBalance) {
-            const balanceEl = document.getElementById('accountBalanceDisplay');
-            if (balanceEl) balanceEl.textContent = '$' + window.startingBalance.toFixed(2);
-            
-            const startingEl = document.getElementById('startingBalanceDisplay');
-            if (startingEl) startingEl.textContent = '$' + window.startingBalance.toFixed(2);
-            
-            const totalDeposits = window.deposits?.reduce((s, d) => s + d.amount, 0) || 0;
-            const totalDepositsEl = document.getElementById('totalDepositsDisplay');
-            if (totalDepositsEl) totalDepositsEl.textContent = '$' + totalDeposits.toFixed(2);
-        }
-    }, 500);
-    
-    console.log('✅ ULTIMATE DEPOSIT FIX INSTALLED!');
-    console.log('📝 Now: Deposit $100 → Starting Balance = $100 → Current Balance = $100');
 })();
