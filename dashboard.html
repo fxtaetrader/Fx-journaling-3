@@ -3466,7 +3466,7 @@
         </div>
     </div>
 
-    <!-- Main Dashboard Container -->
+   <!-- Main Dashboard Container -->
     <div class="dashboard-container" id="mainContainer" style="display: none;">
         <!-- Top Navigation -->
         <nav class="dashboard-nav">
@@ -3507,29 +3507,8 @@
 
         <!-- Sidebar Navigation -->
         <aside class="dashboard-sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    <i class="fas fa-chart-line"></i>
-                    <span>FX TAE</span>
-                </div>
-                <button class="sidebar-close" id="sidebarClose">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="sidebar-user">
-                <div class="sidebar-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="sidebar-user-info">
-                    <h4 id="sidebarUserName">Trader</h4>
-                    <p id="sidebarUserEmail">trader@example.com</p>
-                </div>
-            </div>
-
             <div class="sidebar-menu">
                 <div class="menu-section">
-                    <div class="menu-section-title">Main</div>
                     <ul class="nav-menu">
                         <li>
                             <a href="#" class="nav-item active" data-page="dashboard">
@@ -3561,12 +3540,6 @@
                                 <span>Trading Goals</span>
                             </a>
                         </li>
-                    </ul>
-                </div>
-
-                <div class="menu-section">
-                    <div class="menu-section-title">Community</div>
-                    <ul class="nav-menu">
                         <li>
                             <a href="#" class="nav-item" data-page="community">
                                 <i class="fas fa-users"></i>
@@ -3591,12 +3564,6 @@
                                 <span>Resources</span>
                             </a>
                         </li>
-                    </ul>
-                </div>
-
-                <div class="menu-section">
-                    <div class="menu-section-title">Settings</div>
-                    <ul class="nav-menu">
                         <li>
                             <a href="#" class="nav-item" data-page="settings">
                                 <i class="fas fa-cog"></i>
@@ -3610,16 +3577,23 @@
                             </a>
                         </li>
                     </ul>
-                </div>
-            </div>
-
-            <div class="sidebar-footer">
-                <button class="sidebar-logout" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </button>
-            </div>
-        </aside>
+                    
+                    <div class="sidebar-footer">
+                        <div class="sidebar-balance">
+                            <i class="fas fa-wallet"></i>
+                            <div>
+                                <span>Account Balance</span>
+                                <strong id="sidebarBalance">$0.00</strong>
+                            </div>
+                        </div>
+                        <button class="sidebar-logout" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div> 
+            </div> 
+        </aside> 
 
         <!-- Main Content Area -->
         <main class="dashboard-main" id="mainContent">
