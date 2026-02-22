@@ -24,6 +24,7 @@ let buysSellsChart = null;
 let currentCalendarMonth = new Date().getMonth();
 let currentCalendarYear = new Date().getFullYear();
 
+
 // ===== AUTHENTICATION FUNCTIONS =====
 function initializeUsers() {
     if (!localStorage.getItem(USERS_KEY)) localStorage.setItem(USERS_KEY, JSON.stringify([]));
