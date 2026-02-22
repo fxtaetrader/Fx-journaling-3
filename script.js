@@ -2254,142 +2254,57 @@ window.showToast = showToast;
     console.log('✅ Emergency loader fix installed');
 })();
 
-// ===== SAFE DEPOSIT FIX - ADD AT THE VERY END OF SCRIPT.JS =====
-// This fixes the deposit issue without breaking anything else
+// ===== ULTRA SIMPLE DEPOSIT FIX - JUST ADD THIS =====
+// This is the simplest possible fix - just reloads the page after deposit
 
 (function() {
-    console.log('🔧 Installing safe deposit fix...');
-    
-    // Wait for everything to load
+    // Wait for page to load
     setTimeout(function() {
         
-        // Store the original function
-        const originalProcessDeposit = window.processDeposit;
+        // Find the deposit button and override its click
+        const depositButtons = document.querySelectorAll('.btn-deposit');
         
-        // Replace with fixed version
-        window.processDeposit = function() {
-            console.log('💰 Processing deposit with FIXED logic');
-            
-            // Get form values
-            const date = document.getElementById('depositDate')?.value;
-            const time = document.getElementById('depositTime')?.value;
-            const broker = document.getElementById('depositBroker')?.value;
-            const amount = parseFloat(document.getElementById('depositAmount')?.value);
-            const notes = document.getElementById('depositNotes')?.value;
-            
-            // Validate
-            if (!date || !time || !broker || isNaN(amount) || amount <= 0) {
-                if (typeof showToast === 'function') {
-                    showToast('Please fill all fields with valid amount', 'error');
-                } else {
-                    alert('Please fill all fields with valid amount');
+        depositButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('💰 Processing deposit with simple fix');
+                
+                // Get amount
+                const amountInput = document.getElementById('depositAmount');
+                const amount = parseFloat(amountInput?.value);
+                
+                if (!amount || amount <= 0) {
+                    alert('Please enter a valid amount');
+                    return;
                 }
-                return false;
-            }
-            
-            try {
-                // Get current user data
-                const currentUser = JSON.parse(localStorage.getItem('fxTaeCurrentUser') || '{}');
-                const userId = currentUser.id || 'default';
                 
-                // CRITICAL: Set starting balance to deposit amount (NOT add)
-                const startingBalanceKey = 'fxTaeStartingBalance';
-                localStorage.setItem(startingBalanceKey, amount.toString());
+                // Save deposit amount as starting balance
+                localStorage.setItem('fxTaeStartingBalance', amount.toString());
                 
-                // Create deposit record
-                const depositsKey = 'fxTaeDeposits';
-                const newDeposit = {
+                // Create a simple deposit record
+                const deposit = {
                     id: Date.now(),
-                    date: date,
-                    time: time,
-                    broker: broker,
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString(),
                     amount: amount,
-                    notes: notes || 'Deposit',
-                    balanceBefore: 0,
-                    balanceAfter: amount
+                    broker: document.getElementById('depositBroker')?.value || 'Manual',
+                    notes: 'Deposit'
                 };
                 
-                // Save deposit (replace old ones)
-                localStorage.setItem(depositsKey, JSON.stringify([newDeposit]));
+                localStorage.setItem('fxTaeDeposits', JSON.stringify([deposit]));
                 
-                // Clear trades if you want a fresh start (optional)
-                // localStorage.setItem('fxTaeTrades', JSON.stringify([]));
+                alert('✅ Deposit successful! Page will reload to show $' + amount);
                 
-                // Clear withdrawals if you want a fresh start (optional)
-                // localStorage.setItem('fxTaeWithdrawals', JSON.stringify([]));
-                
-                // Update all balance displays
-                const balanceElements = [
-                    'accountBalance',
-                    'sidebarBalance',
-                    'accountBalanceDisplay',
-                    'startingBalanceDisplay',
-                    'totalDepositsDisplay'
-                ];
-                
-                balanceElements.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        if (id === 'totalDepositsDisplay') {
-                            el.textContent = '$' + amount.toFixed(2);
-                        } else if (id === 'startingBalanceDisplay') {
-                            el.textContent = '$' + amount.toFixed(2);
-                        } else {
-                            el.textContent = '$' + amount.toFixed(2);
-                        }
-                    }
-                });
-                
-                // Clear form
-                const amountInput = document.getElementById('depositAmount');
-                if (amountInput) amountInput.value = '';
-                
-                const notesInput = document.getElementById('depositNotes');
-                if (notesInput) notesInput.value = '';
-                
-                const newBalanceInput = document.getElementById('newBalanceAfterDeposit');
-                if (newBalanceInput) newBalanceInput.value = amount.toFixed(2);
-                
-                // Show success message
-                if (typeof showToast === 'function') {
-                    showToast('✅ Deposit successful! Balance: $' + amount.toFixed(2), 'success');
-                } else {
-                    alert('Deposit successful! Balance: $' + amount.toFixed(2));
-                }
-                
-                // Reload the page to refresh all data (safest approach)
-                setTimeout(function() {
+                // Reload page to show correct balance
+                setTimeout(() => {
                     location.reload();
-                }, 1500);
-                
-                return true;
-                
-            } catch (error) {
-                console.error('Deposit error:', error);
-                if (typeof showToast === 'function') {
-                    showToast('Error processing deposit', 'error');
-                } else {
-                    alert('Error processing deposit');
-                }
-                return false;
-            }
-        };
-        
-        // Fix the preview when typing amount
-        const depositAmountField = document.getElementById('depositAmount');
-        if (depositAmountField) {
-            depositAmountField.addEventListener('input', function() {
-                const val = parseFloat(this.value) || 0;
-                const preview = document.getElementById('newBalanceAfterDeposit');
-                if (preview) {
-                    preview.value = val.toFixed(2);
-                }
+                }, 1000);
             });
-        }
+        });
         
-        console.log('✅ Safe deposit fix installed!');
-        console.log('📝 Deposit $100 → Balance shows $100 (not $200)');
+        console.log('✅ Simple deposit fix applied');
         
-    }, 1000); // Wait 1 second for everything to load
-    
+    }, 2000);
 })();
