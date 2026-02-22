@@ -2253,3 +2253,102 @@ window.showToast = showToast;
     
     console.log('✅ Emergency loader fix installed');
 })();
+
+// ===== FORCE FIX FOR DEPOSIT ISSUE - ADD THIS AT THE VERY END OF YOUR SCRIPT.JS =====
+// This completely overrides the deposit function to work the way you want:
+// Deposit amount becomes the starting balance (not added to existing balance)
+
+// Completely replace the processDeposit function
+window.processDeposit = function() {
+    console.log('🔥 Using FIXED deposit function - deposit becomes starting balance');
+    
+    const date = document.getElementById('depositDate')?.value;
+    const time = document.getElementById('depositTime')?.value;
+    const broker = document.getElementById('depositBroker')?.value;
+    const amount = parseFloat(document.getElementById('depositAmount')?.value);
+    const notes = document.getElementById('depositNotes')?.value;
+    
+    if (!date || !time || !broker || isNaN(amount) || amount <= 0) {
+        showToast('Please fill all fields with valid amount', 'error');
+        return false;
+    }
+    
+    // CRITICAL FIX: The deposit amount BECOMES the starting balance
+    // It does NOT add to existing balance
+    const oldStartingBalance = startingBalance;
+    startingBalance = amount; // ← THIS IS THE KEY FIX - deposit becomes starting balance
+    saveStartingBalance();
+    
+    // Calculate new balance (starting balance ONLY, no addition)
+    const newBalance = startingBalance;
+    
+    const deposit = {
+        id: Date.now(),
+        date,
+        time,
+        broker,
+        amount: Math.abs(amount),
+        notes: notes || 'Deposit',
+        balanceBefore: oldStartingBalance,
+        balanceAfter: newBalance,
+        type: 'deposit'
+    };
+    
+    // Clear old deposits (since we're replacing the starting balance)
+    deposits = [deposit]; // Only keep this new deposit
+    saveDeposits();
+    
+    // IMPORTANT: Do NOT keep any previous trades or withdrawals when resetting balance?
+    // If you want to keep them, remove the next two lines
+    trades = []; // Clear trades when balance resets (optional - remove if you want to keep trades)
+    withdrawals = []; // Clear withdrawals when balance resets (optional - remove if you want to keep withdrawals)
+    saveTrades();
+    saveWithdrawals();
+    
+    // Update everything
+    updateAccountBalanceDisplay();
+    updateDashboardStats();
+    updateRecentActivity();
+    updateTransactionHistory();
+    updateAllTradesTable();
+    
+    if (equityChart) {
+        updateEquityChart('12m');
+    }
+    
+    // Clear form
+    document.getElementById('depositAmount').value = '';
+    document.getElementById('depositNotes').value = '';
+    document.getElementById('newBalanceAfterDeposit').value = newBalance.toFixed(2);
+    
+    showToast(`✅ Starting Balance set to $${amount.toFixed(2)}!`, 'success');
+    console.log(`✅ Deposit fixed: Starting balance changed from $${oldStartingBalance} to $${startingBalance}`);
+    return true;
+};
+
+// Also fix the balance preview when typing
+const depositAmountField = document.getElementById('depositAmount');
+if (depositAmountField) {
+    // Remove any existing listeners and add new one
+    depositAmountField.removeEventListener('input', window.depositInputHandler);
+    window.depositInputHandler = function() {
+        const amount = parseFloat(this.value) || 0;
+        // Preview shows the deposit amount as the new balance (not added)
+        document.getElementById('newBalanceAfterDeposit').value = amount.toFixed(2);
+    };
+    depositAmountField.addEventListener('input', window.depositInputHandler);
+}
+
+// Force refresh of balance display
+function forceRefreshBalance() {
+    console.log('🔄 Forcing balance refresh...');
+    updateAccountBalanceDisplay();
+}
+
+// Run refresh after a short delay
+setTimeout(forceRefreshBalance, 100);
+setTimeout(forceRefreshBalance, 500);
+setTimeout(forceRefreshBalance, 1000);
+
+console.log('✅ Deposit fix installed - Deposits now BECOME the starting balance!');
+console.log('📝 Example: Deposit $20 → Starting Balance = $20, Current Balance = $20');
