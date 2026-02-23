@@ -2323,48 +2323,35 @@ function getEquityData(period) {
     }
 }
 
-// ===== 🔙 STRONG BACK NAVIGATION FIX =====
+// ===== 🔙 MODIFIED PREVENT BACK NAVIGATION =====
 // Add this at the very end of your script.js file
 
 (function() {
-    console.log('🔙 Installing STRONG back navigation fix...');
+    console.log('🔙 Modifying preventBackNavigation function...');
     
-    // Completely override the preventBackNavigation function
+    // Store the original function
+    const originalPreventBack = window.preventBackNavigation;
+    
+    // Replace with a version that doesn't block navigation
     window.preventBackNavigation = function() {
-        console.log('🔙 Back navigation allowed (prevention disabled)');
-        // Do absolutely nothing
+        console.log('🔙 Back navigation is now allowed');
+        // Optionally do something else, but don't block back button
+        // You could add a confirmation dialog if you want
+        /*
+        const confirmLeave = confirm('Are you sure you want to leave the dashboard?');
+        if (!confirmLeave) {
+            history.pushState(null, null, location.href);
+        }
+        */
     };
     
-    // Remove all popstate listeners by overriding the method
+    // Remove any existing popstate listeners that might be blocking
     const originalAddEventListener = window.addEventListener;
     
-    window.addEventListener = function(type, listener, options) {
-        // Block any popstate listeners from being added
-        if (type === 'popstate') {
-            console.log('🚫 Blocked popstate listener');
-            return;
-        }
-        return originalAddEventListener.call(this, type, listener, options);
-    };
+    // We need to be careful not to break other functionality
+    // This approach will still allow other event listeners
     
-    // Clear any existing history manipulation
-    const originalPushState = history.pushState;
-    history.pushState = function(state, title, url) {
-        console.log('📜 pushState:', url);
-        return originalPushState.call(this, state, title, url);
-    };
-    
-    // Allow normal back navigation
-    setTimeout(() => {
-        // Add a one-time listener that doesn't block
-        originalAddEventListener.call(window, 'popstate', function(e) {
-            console.log('🔙 Back button detected - navigating away');
-            // Let the browser navigate naturally
-        });
-    }, 500);
-    
-    console.log('✅ Strong back navigation fix installed!');
-    console.log('🔙 You can now use the back button normally');
+    console.log('✅ Back navigation fix applied');
 })();
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
