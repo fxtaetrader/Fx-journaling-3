@@ -2213,6 +2213,116 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== FIXED EQUITY CURVE FUNCTION - REPLACE THE EXISTING ONE =====
+function getEquityData(period) {
+    // Get starting balance
+    const startBal = startingBalance || 0;
+    
+    // Collect activities that affect balance (EXCLUDING DEPOSITS for movement)
+    const activities = [];
+    
+    // Add withdrawals (these cause downward movement)
+    withdrawals.forEach(w => {
+        activities.push({
+            date: w.date,
+            amount: -w.amount,
+            type: 'withdrawal'
+        });
+    });
+    
+    // Add trades (these cause upward/downward movement)
+    trades.forEach(t => {
+        activities.push({
+            date: t.date,
+            amount: t.pnl,
+            type: 'trade'
+        });
+    });
+    
+    // Sort by date
+    activities.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Group by date
+    const dailyChanges = new Map();
+    activities.forEach(activity => {
+        const date = activity.date;
+        if (!dailyChanges.has(date)) {
+            dailyChanges.set(date, 0);
+        }
+        dailyChanges.set(date, dailyChanges.get(date) + activity.amount);
+    });
+    
+    const activeDates = Array.from(dailyChanges.keys()).sort();
+    
+    if (period === '1m') {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        const relevantDates = activeDates.filter(date => new Date(date) >= oneMonthAgo);
+        
+        // CRITICAL: Start with starting balance (deposit amount)
+        const labels = ['Start'];
+        const data = [startBal];
+        let runningBalance = startBal;
+        
+        relevantDates.forEach(date => {
+            runningBalance += dailyChanges.get(date);
+            data.push(runningBalance);
+            labels.push(formatFullDate(date));
+        });
+        
+        updateEquityStats(data);
+        
+        return {
+            labels,
+            datasets: [{
+                label: 'Account Balance',
+                data,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true
+            }]
+        };
+    } else {
+        const monthlyData = new Map();
+        
+        activities.forEach(activity => {
+            const monthKey = activity.date.substring(0, 7);
+            if (!monthlyData.has(monthKey)) {
+                monthlyData.set(monthKey, 0);
+            }
+            monthlyData.set(monthKey, monthlyData.get(monthKey) + activity.amount);
+        });
+        
+        const labels = ['Start'];
+        const data = [startBal];
+        let runningBalance = startBal;
+        
+        const sortedMonths = Array.from(monthlyData.keys()).sort().slice(-12);
+        
+        sortedMonths.forEach(month => {
+            runningBalance += monthlyData.get(month);
+            data.push(runningBalance);
+            const [year, monthNum] = month.split('-');
+            const monthName = new Date(year, monthNum - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            labels.push(monthName);
+        });
+        
+        updateEquityStats(data);
+        
+        return {
+            labels,
+            datasets: [{
+                label: 'Account Balance',
+                data,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true
+            }]
+        };
+    }
+}
+
 // ===== EXPORT GLOBAL FUNCTIONS =====
 window.initializeDashboard = initializeDashboard;
 window.saveTrade = saveTrade;
