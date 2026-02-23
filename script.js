@@ -2323,115 +2323,124 @@ function getEquityData(period) {
     }
 }
 
-// ===== 🔙🔜 CORRECTED NAVIGATION - BACK ALLOWED, FORWARD BLOCKED =====
+// ===== 🔙 BACK NAVIGATION ONLY - FORWARD NAVIGATION BLOCKED =====
 // Add this at the very end of your script.js file
 
 (function() {
-    console.log('🛡️ Installing CORRECTED navigation control...');
+    console.log('🚫 Installing navigation control: BACK allowed, FORWARD blocked');
     
     // Wait for everything to load
     setTimeout(function() {
         
-        // Store original history methods
-        const originalGo = history.go;
-        const originalBack = history.back;
-        const originalForward = history.forward;
+        // Store authentication state
+        let isAuthenticated = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
         
-        // BLOCK ONLY FORWARD NAVIGATION
-        history.forward = function() {
-            console.log('🚫 FORWARD NAVIGATION BLOCKED');
-            if (typeof showToast === 'function') {
-                showToast('Forward navigation is disabled', 'warning');
-            }
-            return false;
-        };
-        
-        // Allow back navigation
-        history.back = function() {
-            console.log('🔙 Back navigation allowed');
-            return originalBack.call(this);
-        };
-        
-        // Override go but only block positive numbers (forward)
-        history.go = function(delta) {
-            // If trying to go forward (positive delta), block it
-            if (delta > 0) {
-                console.log('🚫 Forward navigation blocked (go method)');
-                if (typeof showToast === 'function') {
-                    showToast('Forward navigation is disabled', 'warning');
+        // Override the preventBackNavigation function to allow back but block forward
+        window.preventBackNavigation = function() {
+            console.log('🔙 Back navigation allowed, forward navigation blocked');
+            
+            // This allows back navigation but prevents forward
+            history.pushState(null, null, location.href);
+            
+            // Handle popstate (back button) - let it work normally
+            window.addEventListener('popstate', function(event) {
+                console.log('🔙 Back button pressed - navigating to landing page');
+                
+                // Check if we're leaving the dashboard
+                if (!window.location.pathname.includes('dashboard.html')) {
+                    // We're leaving, clear auth state? No - let logout handle it
+                    console.log('👋 Leaving dashboard page');
                 }
-                return false;
-            }
-            
-            // Allow going back (negative delta or zero)
-            console.log(`🔙 Going back ${Math.abs(delta)} steps`);
-            return originalGo.call(this, delta);
+            });
         };
         
-        // Don't override pushState/replaceState - let them work normally
-        
-        // Handle popstate events (back/forward buttons)
-        window.addEventListener('popstate', function(e) {
-            console.log('📍 Navigation detected');
-            
-            // Check authentication
-            const auth = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
-            const currentPath = window.location.pathname;
-            const isOnDashboard = currentPath.includes('dashboard.html');
-            const isOnLanding = currentPath.includes('index.html') || currentPath.endsWith('/');
-            
-            console.log(`📍 Path: ${currentPath}, Auth: ${auth}`);
-            
-            // If we end up on dashboard without auth, redirect to landing
-            if (isOnDashboard && !auth) {
-                console.log('🔒 Not authenticated on dashboard - redirecting');
-                window.location.replace('index.html');
-                return;
-            }
-            
-            // Otherwise, let navigation happen naturally
-            console.log('✅ Navigation allowed');
-        });
-        
-        // Block forward keyboard shortcuts but allow back
-        document.addEventListener('keydown', function(e) {
-            // Check for forward navigation keys (Alt+Right, etc.)
-            if ((e.key === 'ArrowRight' && (e.altKey || e.metaKey)) || 
-                (e.key === 'ArrowRight' && e.ctrlKey)) {
-                console.log('🚫 Forward keyboard shortcut blocked');
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof showToast === 'function') {
-                    showToast('Forward navigation is disabled', 'warning');
-                }
-                return false;
-            }
-            
-            // Allow back keyboard shortcuts (Alt+Left, etc.)
-            if ((e.key === 'ArrowLeft' && (e.altKey || e.metaKey)) || 
-                (e.key === 'ArrowLeft' && e.ctrlKey)) {
-                console.log('🔙 Back keyboard shortcut allowed');
-                return true; // Let it happen
-            }
-        });
-        
-        // Override logout to ensure clean state
-        const originalLogout = window.logout;
-        if (originalLogout) {
-            window.logout = function() {
-                console.log('🚪 Logging out');
-                const result = originalLogout.apply(this, arguments);
-                // No need to manipulate history - let it work naturally
+        // Clear forward navigation on login
+        const originalSetCurrentUser = window.setCurrentUser;
+        if (originalSetCurrentUser) {
+            window.setCurrentUser = function(user) {
+                console.log('🔐 User logged in - clearing forward history');
+                const result = originalSetCurrentUser.apply(this, arguments);
+                
+                // Replace current history state to prevent forward navigation
+                history.replaceState({ page: 'dashboard' }, '', 'dashboard.html');
+                
                 return result;
             };
         }
         
-        console.log('✅ Navigation control installed!');
-        console.log('🔙 Back button: WORKS (can go to landing page)');
-        console.log('🔜 Forward button: BLOCKED');
-        console.log('📌 Try it: Click back → goes to landing, forward → blocked');
+        // On logout, replace history to prevent going back
+        const originalLogout = window.logout;
+        if (originalLogout) {
+            window.logout = function() {
+                console.log('🚪 Logging out - clearing history');
+                
+                // Clear history so forward can't go back to dashboard
+                history.pushState(null, null, 'index.html');
+                
+                // Call original logout
+                return originalLogout.apply(this, arguments);
+            };
+        }
         
-    }, 500);
+        // If on dashboard, set up history
+        if (window.location.pathname.includes('dashboard.html')) {
+            console.log('📊 On dashboard page - setting up history');
+            
+            // Replace current state
+            history.replaceState({ page: 'dashboard' }, '', window.location.href);
+            
+            // Add a new state to allow back but not forward
+            history.pushState({ page: 'dashboard' }, '', window.location.href);
+            
+            // Handle back button
+            window.addEventListener('popstate', function(event) {
+                console.log('🔙 Back navigation detected');
+                
+                // Check if we're still authenticated
+                const auth = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
+                
+                if (!auth) {
+                    console.log('🔒 Not authenticated - redirecting to login');
+                    window.location.replace('index.html');
+                    return;
+                }
+                
+                // Let back navigation happen naturally
+                // If we're going to index.html, that's fine
+            });
+        }
+        
+        // On page load, check if we're on index and came from dashboard
+        if (window.location.pathname.includes('index.html') || 
+            window.location.pathname.endsWith('/')) {
+            console.log('🏠 On landing page');
+            
+            // Clear any forward history to dashboard
+            if (history.state && history.state.page === 'dashboard') {
+                history.replaceState(null, '', 'index.html');
+            }
+        }
+        
+        // Block forward navigation attempts
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                console.log('📄 Page loaded from cache - checking auth');
+                // Page was loaded from cache (forward/back cache)
+                const auth = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
+                const isDashboard = window.location.pathname.includes('dashboard.html');
+                
+                if (isDashboard && !auth) {
+                    console.log('🔒 Not authenticated - redirecting to login');
+                    window.location.replace('index.html');
+                }
+            }
+        });
+        
+        console.log('✅ Navigation control installed!');
+        console.log('🔙 Back: ALLOWED (dashboard → landing page)');
+        console.log('🔜 Forward: BLOCKED (cannot return to dashboard without login)');
+        
+    }, 500); // Wait half a second
 })();
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
