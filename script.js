@@ -2323,6 +2323,50 @@ function getEquityData(period) {
     }
 }
 
+// ===== 🔙 STRONG BACK NAVIGATION FIX =====
+// Add this at the very end of your script.js file
+
+(function() {
+    console.log('🔙 Installing STRONG back navigation fix...');
+    
+    // Completely override the preventBackNavigation function
+    window.preventBackNavigation = function() {
+        console.log('🔙 Back navigation allowed (prevention disabled)');
+        // Do absolutely nothing
+    };
+    
+    // Remove all popstate listeners by overriding the method
+    const originalAddEventListener = window.addEventListener;
+    
+    window.addEventListener = function(type, listener, options) {
+        // Block any popstate listeners from being added
+        if (type === 'popstate') {
+            console.log('🚫 Blocked popstate listener');
+            return;
+        }
+        return originalAddEventListener.call(this, type, listener, options);
+    };
+    
+    // Clear any existing history manipulation
+    const originalPushState = history.pushState;
+    history.pushState = function(state, title, url) {
+        console.log('📜 pushState:', url);
+        return originalPushState.call(this, state, title, url);
+    };
+    
+    // Allow normal back navigation
+    setTimeout(() => {
+        // Add a one-time listener that doesn't block
+        originalAddEventListener.call(window, 'popstate', function(e) {
+            console.log('🔙 Back button detected - navigating away');
+            // Let the browser navigate naturally
+        });
+    }, 500);
+    
+    console.log('✅ Strong back navigation fix installed!');
+    console.log('🔙 You can now use the back button normally');
+})();
+
 // ===== EXPORT GLOBAL FUNCTIONS =====
 window.initializeDashboard = initializeDashboard;
 window.saveTrade = saveTrade;
