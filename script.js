@@ -2213,196 +2213,115 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ===== 🔥 FIX FOR EQUITY CURVE - DEPOSITS SHOULD NOT MOVE THE CURVE =====
-// Add this at the very end of your script.js file
-
-(function() {
-    console.log('📈 Installing equity curve fix - deposits are starting point only...');
+// ===== FIXED EQUITY CURVE FUNCTION - REPLACE THE EXISTING ONE =====
+function getEquityData(period) {
+    // Get starting balance
+    const startBal = startingBalance || 0;
     
-    // Wait for everything to load
-    setTimeout(function() {
+    // Collect activities that affect balance (EXCLUDING DEPOSITS for movement)
+    const activities = [];
+    
+    // Add withdrawals (these cause downward movement)
+    withdrawals.forEach(w => {
+        activities.push({
+            date: w.date,
+            amount: -w.amount,
+            type: 'withdrawal'
+        });
+    });
+    
+    // Add trades (these cause upward/downward movement)
+    trades.forEach(t => {
+        activities.push({
+            date: t.date,
+            amount: t.pnl,
+            type: 'trade'
+        });
+    });
+    
+    // Sort by date
+    activities.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Group by date
+    const dailyChanges = new Map();
+    activities.forEach(activity => {
+        const date = activity.date;
+        if (!dailyChanges.has(date)) {
+            dailyChanges.set(date, 0);
+        }
+        dailyChanges.set(date, dailyChanges.get(date) + activity.amount);
+    });
+    
+    const activeDates = Array.from(dailyChanges.keys()).sort();
+    
+    if (period === '1m') {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         
-        // Store the original getEquityData function
-        const originalGetEquityData = window.getEquityData;
+        const relevantDates = activeDates.filter(date => new Date(date) >= oneMonthAgo);
         
-        // Override with fixed version
-        window.getEquityData = function(period) {
-            console.log('📊 Generating equity curve with FIXED logic');
-            
-            // Get starting balance
-            const startBal = window.startingBalance || 0;
-            
-            // Collect activities that affect balance (EXCLUDING DEPOSITS for movement)
-            const activities = [];
-            
-            // Add withdrawals (these cause downward movement)
-            if (window.withdrawals) {
-                window.withdrawals.forEach(w => {
-                    activities.push({
-                        date: w.date,
-                        amount: -w.amount, // Negative for withdrawals
-                        type: 'withdrawal'
-                    });
-                });
-            }
-            
-            // Add trades (these cause upward/downward movement)
-            if (window.trades) {
-                window.trades.forEach(t => {
-                    activities.push({
-                        date: t.date,
-                        amount: t.pnl,
-                        type: 'trade'
-                    });
-                });
-            }
-            
-            // Sort by date
-            activities.sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            // Group by date (combine multiple activities on same day)
-            const dailyChanges = new Map();
-            activities.forEach(activity => {
-                const date = activity.date;
-                if (!dailyChanges.has(date)) {
-                    dailyChanges.set(date, 0);
-                }
-                dailyChanges.set(date, dailyChanges.get(date) + activity.amount);
-            });
-            
-            // Get unique dates with activity (trades or withdrawals only)
-            const activeDates = Array.from(dailyChanges.keys()).sort();
-            
-            if (period === '1m') {
-                // Filter to last 30 days
-                const oneMonthAgo = new Date();
-                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-                
-                const relevantDates = activeDates.filter(date => new Date(date) >= oneMonthAgo);
-                
-                // CRITICAL FIX: Start with starting balance, NOT zero
-                // Deposits are the STARTING POINT, not movements
-                const labels = ['Start'];
-                const data = [startBal];
-                let runningBalance = startBal;
-                
-                // Add each activity date (trades and withdrawals only)
-                relevantDates.forEach(date => {
-                    runningBalance += dailyChanges.get(date);
-                    data.push(runningBalance);
-                    labels.push(formatFullDate(date));
-                });
-                
-                // Update equity stats
-                const peak = Math.max(...data);
-                const currentEquity = data[data.length - 1];
-                const drawdown = peak > 0 ? ((peak - currentEquity) / peak * 100).toFixed(1) : 0;
-                
-                const peakEl = document.getElementById('equityPeak');
-                if (peakEl) peakEl.textContent = window.formatCurrency ? window.formatCurrency(peak) : '$' + peak.toFixed(2);
-                
-                const drawdownEl = document.getElementById('equityDrawdown');
-                if (drawdownEl) drawdownEl.textContent = `${drawdown}%`;
-                
-                return {
-                    labels,
-                    datasets: [{
-                        label: 'Account Balance',
-                        data,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true
-                    }]
-                };
-            } else {
-                // 12M view - group by month
-                const monthlyData = new Map();
-                
-                activities.forEach(activity => {
-                    const monthKey = activity.date.substring(0, 7); // YYYY-MM
-                    if (!monthlyData.has(monthKey)) {
-                        monthlyData.set(monthKey, 0);
-                    }
-                    monthlyData.set(monthKey, monthlyData.get(monthKey) + activity.amount);
-                });
-                
-                // CRITICAL FIX: Start with starting balance
-                const labels = ['Start'];
-                const data = [startBal];
-                let runningBalance = startBal;
-                
-                // Get last 12 months with activity
-                const sortedMonths = Array.from(monthlyData.keys()).sort().slice(-12);
-                
-                sortedMonths.forEach(month => {
-                    runningBalance += monthlyData.get(month);
-                    data.push(runningBalance);
-                    const [year, monthNum] = month.split('-');
-                    const monthName = new Date(year, monthNum - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                    labels.push(monthName);
-                });
-                
-                // Update equity stats
-                const peak = Math.max(...data);
-                const currentEquity = data[data.length - 1];
-                const drawdown = peak > 0 ? ((peak - currentEquity) / peak * 100).toFixed(1) : 0;
-                
-                const peakEl = document.getElementById('equityPeak');
-                if (peakEl) peakEl.textContent = window.formatCurrency ? window.formatCurrency(peak) : '$' + peak.toFixed(2);
-                
-                const drawdownEl = document.getElementById('equityDrawdown');
-                if (drawdownEl) drawdownEl.textContent = `${drawdown}%`;
-                
-                return {
-                    labels,
-                    datasets: [{
-                        label: 'Account Balance',
-                        data,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true
-                    }]
-                };
-            }
+        // CRITICAL: Start with starting balance (deposit amount)
+        const labels = ['Start'];
+        const data = [startBal];
+        let runningBalance = startBal;
+        
+        relevantDates.forEach(date => {
+            runningBalance += dailyChanges.get(date);
+            data.push(runningBalance);
+            labels.push(formatFullDate(date));
+        });
+        
+        updateEquityStats(data);
+        
+        return {
+            labels,
+            datasets: [{
+                label: 'Account Balance',
+                data,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true
+            }]
         };
+    } else {
+        const monthlyData = new Map();
         
-        // Force update the chart if it exists
-        if (window.equityChart) {
-            setTimeout(() => {
-                console.log('🔄 Updating equity chart with fixed logic');
-                const activePeriod = document.querySelector('.period-btn.active')?.getAttribute('data-period') || '1m';
-                window.equityChart.data = window.getEquityData(activePeriod);
-                window.equityChart.update();
-            }, 100);
-        }
+        activities.forEach(activity => {
+            const monthKey = activity.date.substring(0, 7);
+            if (!monthlyData.has(monthKey)) {
+                monthlyData.set(monthKey, 0);
+            }
+            monthlyData.set(monthKey, monthlyData.get(monthKey) + activity.amount);
+        });
         
-        // Also fix the processDeposit function to ensure it doesn't affect the chart curve
-        const originalProcessDeposit = window.processDeposit;
-        if (originalProcessDeposit) {
-            window.processDeposit = function() {
-                // Call original function
-                const result = originalProcessDeposit.apply(this, arguments);
-                
-                // After deposit, update equity chart but ensure deposit doesn't create a curve movement
-                setTimeout(() => {
-                    if (window.equityChart) {
-                        const activePeriod = document.querySelector('.period-btn.active')?.getAttribute('data-period') || '1m';
-                        window.equityChart.data = window.getEquityData(activePeriod);
-                        window.equityChart.update();
-                        console.log('📈 Equity chart updated after deposit - deposit is starting point only');
-                    }
-                }, 200);
-                
-                return result;
-            };
-        }
+        const labels = ['Start'];
+        const data = [startBal];
+        let runningBalance = startBal;
         
-        console.log('✅ Equity curve fix installed!');
-        console.log('📊 Now: Deposits = Starting Point (no curve movement)');
-        console.log('📉 Only Trades and Withdrawals move the curve');
+        const sortedMonths = Array.from(monthlyData.keys()).sort().slice(-12);
         
-    }, 1000); // Wait 1 second for everything to load
-})();
+        sortedMonths.forEach(month => {
+            runningBalance += monthlyData.get(month);
+            data.push(runningBalance);
+            const [year, monthNum] = month.split('-');
+            const monthName = new Date(year, monthNum - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            labels.push(monthName);
+        });
+        
+        updateEquityStats(data);
+        
+        return {
+            labels,
+            datasets: [{
+                label: 'Account Balance',
+                data,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true
+            }]
+        };
+    }
+}
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
 window.initializeDashboard = initializeDashboard;
