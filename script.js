@@ -2323,35 +2323,96 @@ function getEquityData(period) {
     }
 }
 
-// ===== 🔙 MODIFIED PREVENT BACK NAVIGATION =====
+// ===== 🔐 PROPER BACK NAVIGATION CONTROL =====
 // Add this at the very end of your script.js file
 
 (function() {
-    console.log('🔙 Modifying preventBackNavigation function...');
+    console.log('🔐 Installing proper navigation control...');
     
-    // Store the original function
-    const originalPreventBack = window.preventBackNavigation;
-    
-    // Replace with a version that doesn't block navigation
-    window.preventBackNavigation = function() {
-        console.log('🔙 Back navigation is now allowed');
-        // Optionally do something else, but don't block back button
-        // You could add a confirmation dialog if you want
-        /*
-        const confirmLeave = confirm('Are you sure you want to leave the dashboard?');
-        if (!confirmLeave) {
-            history.pushState(null, null, location.href);
+    // Wait for everything to load
+    setTimeout(function() {
+        
+        // Clear any existing history manipulation
+        const currentPath = window.location.pathname;
+        const isDashboard = currentPath.includes('dashboard.html');
+        const isLanding = currentPath.includes('index.html') || 
+                          currentPath.endsWith('/') || 
+                          currentPath.endsWith('index');
+        
+        // If on dashboard, ensure user is authenticated
+        if (isDashboard) {
+            const isAuth = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
+            
+            if (!isAuth) {
+                console.log('🔒 Not authenticated - redirecting to login');
+                window.location.replace('index.html');
+                return;
+            }
+            
+            // Clear forward history so they can't go forward after logout
+            console.log('🧹 Clearing forward history...');
+            history.pushState(null, null, window.location.href);
+            
+            // Handle back button - this will go to landing page, but we'll check auth
+            window.addEventListener('popstate', function(e) {
+                console.log('🔙 Back button pressed');
+                
+                // Check if they're trying to go back
+                const confirmLeave = confirm('Are you sure you want to leave the dashboard?');
+                
+                if (confirmLeave) {
+                    // They want to leave - send to landing page
+                    console.log('👋 User confirmed leaving - redirecting to landing page');
+                    window.location.replace('index.html');
+                } else {
+                    // They want to stay - push state to prevent back navigation
+                    console.log('🚫 User canceled - staying on dashboard');
+                    history.pushState(null, null, window.location.href);
+                }
+            });
         }
-        */
-    };
-    
-    // Remove any existing popstate listeners that might be blocking
-    const originalAddEventListener = window.addEventListener;
-    
-    // We need to be careful not to break other functionality
-    // This approach will still allow other event listeners
-    
-    console.log('✅ Back navigation fix applied');
+        
+        // If on landing page, ensure they can't go back to dashboard without logging in
+        if (isLanding) {
+            console.log('🏠 On landing page - clearing history');
+            
+            // Clear all history so they can't go back to dashboard
+            history.pushState(null, null, window.location.href);
+            
+            // If they try to go back, keep them on landing page
+            window.addEventListener('popstate', function(e) {
+                console.log('🔙 Back button on landing page - staying here');
+                history.pushState(null, null, window.location.href);
+            });
+            
+            // After successful login, the redirect will happen naturally
+        }
+        
+        // Override the logout function to ensure clean navigation
+        const originalLogout = window.logout;
+        if (originalLogout) {
+            window.logout = function() {
+                console.log('🚪 Logging out - clearing session');
+                
+                // Clear session
+                sessionStorage.removeItem('fxTaeAuthenticated');
+                localStorage.removeItem('fxTaeCurrentUser');
+                
+                // Clear history and redirect to landing page
+                history.replaceState(null, null, 'index.html');
+                window.location.replace('index.html');
+                
+                // Show message if function exists
+                if (typeof showToast === 'function') {
+                    showToast('Logged out successfully', 'success');
+                }
+            };
+        }
+        
+        console.log('✅ Navigation control installed!');
+        console.log('🔐 Flow: Landing Page → Login → Dashboard → Logout → Landing Page');
+        
+    }, 500);
 })();
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
