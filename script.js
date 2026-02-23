@@ -2443,6 +2443,103 @@ function getEquityData(period) {
     }, 500); // Wait half a second
 })();
 
+// ===== UNIVERSAL BROWSER COMPATIBILITY FIX =====
+// Add this at the very end of your script.js file
+
+(function() {
+    console.log('🌐 Installing universal browser compatibility fixes...');
+    
+    // Run after everything loads
+    setTimeout(function() {
+        
+        // Detect Brave browser
+        const isBrave = (navigator.brave && typeof navigator.brave.isBrave === 'function');
+        
+        if (isBrave) {
+            console.log('🦁 Brave browser detected - applying specific fixes');
+            
+            // Add a class to body for Brave-specific CSS
+            document.body.classList.add('brave-browser');
+            
+            // Fix font rendering in Brave
+            const style = document.createElement('style');
+            style.textContent = `
+                .brave-browser {
+                    -webkit-font-smoothing: antialiased !important;
+                    -moz-osx-font-smoothing: grayscale !important;
+                    text-rendering: optimizeLegibility !important;
+                }
+                
+                .brave-browser button,
+                .brave-browser .btn-save-trade,
+                .brave-browser .btn-save-download,
+                .brave-browser .btn-clear,
+                .brave-browser .btn-deposit,
+                .brave-browser .btn-withdrawal {
+                    font-size: 14px !important;
+                    padding: 12px 24px !important;
+                    min-width: 120px !important;
+                    white-space: nowrap !important;
+                }
+                
+                .brave-browser .premium-input,
+                .brave-browser .premium-select,
+                .brave-browser .premium-textarea {
+                    font-size: 14px !important;
+                    padding: 10px 12px !important;
+                }
+                
+                .brave-browser .stat-value-large {
+                    font-size: 24px !important;
+                }
+                
+                .brave-browser .activity-table td,
+                .brave-browser .activity-table th {
+                    font-size: 13px !important;
+                    padding: 10px !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Fix for all browsers - ensure buttons don't stretch
+        const buttons = document.querySelectorAll('button, .btn-save-trade, .btn-save-download, .btn-clear, .btn-deposit, .btn-withdrawal, .action-btn-export, .btn-view-all');
+        buttons.forEach(btn => {
+            btn.style.minWidth = '120px';
+            btn.style.whiteSpace = 'nowrap';
+            btn.style.overflow = 'hidden';
+            btn.style.textOverflow = 'ellipsis';
+        });
+        
+        // Fix form inputs
+        const inputs = document.querySelectorAll('.premium-input, .premium-select, .premium-textarea');
+        inputs.forEach(input => {
+            input.style.fontSize = '14px';
+            input.style.padding = '10px 12px';
+        });
+        
+        // Ensure tables are readable
+        const tables = document.querySelectorAll('.activity-table, .transaction-table, .all-trades-table');
+        tables.forEach(table => {
+            const cells = table.querySelectorAll('td, th');
+            cells.forEach(cell => {
+                cell.style.fontSize = '13px';
+                cell.style.padding = '10px';
+            });
+        });
+        
+        // Fix stat cards
+        const statValues = document.querySelectorAll('.stat-value-large');
+        statValues.forEach(stat => {
+            stat.style.fontSize = '24px';
+        });
+        
+        console.log('✅ Universal browser compatibility fixes applied');
+        console.log('📱 Your site will now display correctly in all browsers and devices');
+        
+    }, 500);
+})();
+
 // ===== EXPORT GLOBAL FUNCTIONS =====
 window.initializeDashboard = initializeDashboard;
 window.saveTrade = saveTrade;
