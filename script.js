@@ -2323,111 +2323,56 @@ function getEquityData(period) {
     }
 }
 
-// ===== 🔒 ULTIMATE NAVIGATION CONTROL - BACK ALLOWED, FORWARD BLOCKED =====
+// ===== 🔙🔜 CORRECTED NAVIGATION - BACK ALLOWED, FORWARD BLOCKED =====
 // Add this at the very end of your script.js file
 
 (function() {
-    console.log('🛡️ Installing ULTIMATE navigation control...');
+    console.log('🛡️ Installing CORRECTED navigation control...');
     
     // Wait for everything to load
     setTimeout(function() {
         
-        // COMPLETELY OVERRIDE history methods
-        const originalPushState = history.pushState;
-        const originalReplaceState = history.replaceState;
+        // Store original history methods
         const originalGo = history.go;
         const originalBack = history.back;
         const originalForward = history.forward;
         
-        // Track our position in history
-        let historyIndex = 0;
-        const historyStates = [];
-        
-        // Store the current page type
-        let currentPage = window.location.pathname.includes('dashboard.html') ? 'dashboard' : 'landing';
-        let isAuthenticated = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
-        
-        console.log(`📌 Current page: ${currentPage}, Auth: ${isAuthenticated}`);
-        
-        // Override pushState
-        history.pushState = function(state, title, url) {
-            console.log('📝 pushState intercepted:', url);
-            
-            // Call original but track it
-            const result = originalPushState.call(this, state, title, url);
-            
-            // Update our tracking
-            historyStates.push(url);
-            historyIndex = historyStates.length - 1;
-            
-            return result;
-        };
-        
-        // Override replaceState
-        history.replaceState = function(state, title, url) {
-            console.log('📝 replaceState intercepted:', url);
-            
-            // Call original
-            const result = originalReplaceState.call(this, state, title, url);
-            
-            // Update tracking
-            if (historyStates.length > 0) {
-                historyStates[historyIndex] = url;
-            } else {
-                historyStates.push(url);
-                historyIndex = 0;
-            }
-            
-            return result;
-        };
-        
-        // BLOCK FORWARD NAVIGATION COMPLETELY
+        // BLOCK ONLY FORWARD NAVIGATION
         history.forward = function() {
             console.log('🚫 FORWARD NAVIGATION BLOCKED');
-            showToast('Forward navigation is disabled', 'warning');
+            if (typeof showToast === 'function') {
+                showToast('Forward navigation is disabled', 'warning');
+            }
             return false;
         };
         
+        // Allow back navigation
+        history.back = function() {
+            console.log('🔙 Back navigation allowed');
+            return originalBack.call(this);
+        };
+        
+        // Override go but only block positive numbers (forward)
         history.go = function(delta) {
             // If trying to go forward (positive delta), block it
             if (delta > 0) {
-                console.log('🚫 FORWARD NAVIGATION BLOCKED (go method)');
-                showToast('Forward navigation is disabled', 'warning');
+                console.log('🚫 Forward navigation blocked (go method)');
+                if (typeof showToast === 'function') {
+                    showToast('Forward navigation is disabled', 'warning');
+                }
                 return false;
             }
             
-            // Allow going back (negative delta)
-            if (delta < 0) {
-                console.log('🔙 Going back', delta, 'steps');
-                return originalGo.call(this, delta);
-            }
-            
-            // delta = 0 just reloads
+            // Allow going back (negative delta or zero)
+            console.log(`🔙 Going back ${Math.abs(delta)} steps`);
             return originalGo.call(this, delta);
         };
         
-        // Intercept all click events on forward buttons (just in case)
-        document.addEventListener('click', function(e) {
-            // Check if click is on forward button or any navigation element
-            const target = e.target.closest('button, a');
-            if (target) {
-                const text = target.textContent?.toLowerCase() || '';
-                const aria = target.getAttribute('aria-label')?.toLowerCase() || '';
-                
-                if (text.includes('forward') || aria.includes('forward') || 
-                    text.includes('next') || aria.includes('next')) {
-                    console.log('🚫 Forward button click blocked');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    showToast('Forward navigation is disabled', 'warning');
-                    return false;
-                }
-            }
-        }, true);
+        // Don't override pushState/replaceState - let them work normally
         
         // Handle popstate events (back/forward buttons)
         window.addEventListener('popstate', function(e) {
-            console.log('🔍 Popstate event detected');
+            console.log('📍 Navigation detected');
             
             // Check authentication
             const auth = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
@@ -2435,106 +2380,58 @@ function getEquityData(period) {
             const isOnDashboard = currentPath.includes('dashboard.html');
             const isOnLanding = currentPath.includes('index.html') || currentPath.endsWith('/');
             
-            console.log(`📍 Path: ${currentPath}, Auth: ${auth}, Dashboard: ${isOnDashboard}`);
+            console.log(`📍 Path: ${currentPath}, Auth: ${auth}`);
             
-            // If we're on dashboard but not authenticated, force to landing
+            // If we end up on dashboard without auth, redirect to landing
             if (isOnDashboard && !auth) {
-                console.log('🔒 Not authenticated on dashboard - redirecting to landing');
+                console.log('🔒 Not authenticated on dashboard - redirecting');
                 window.location.replace('index.html');
                 return;
             }
             
-            // If we're on landing and authenticated, we don't automatically go to dashboard
-            // User must login explicitly
+            // Otherwise, let navigation happen naturally
+            console.log('✅ Navigation allowed');
+        });
+        
+        // Block forward keyboard shortcuts but allow back
+        document.addEventListener('keydown', function(e) {
+            // Check for forward navigation keys (Alt+Right, etc.)
+            if ((e.key === 'ArrowRight' && (e.altKey || e.metaKey)) || 
+                (e.key === 'ArrowRight' && e.ctrlKey)) {
+                console.log('🚫 Forward keyboard shortcut blocked');
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof showToast === 'function') {
+                    showToast('Forward navigation is disabled', 'warning');
+                }
+                return false;
+            }
             
-            // Determine if this is a forward or back navigation
-            // We can track this by comparing with previous state
-            const newIndex = history.state?.index || 0;
-            
-            // Simple approach: if we were on landing and now on dashboard without auth, block
-            if (isOnDashboard && !auth) {
-                console.log('🚫 Attempted to access dashboard without auth - blocked');
-                window.location.replace('index.html');
+            // Allow back keyboard shortcuts (Alt+Left, etc.)
+            if ((e.key === 'ArrowLeft' && (e.altKey || e.metaKey)) || 
+                (e.key === 'ArrowLeft' && e.ctrlKey)) {
+                console.log('🔙 Back keyboard shortcut allowed');
+                return true; // Let it happen
             }
         });
         
-        // On page load, set up initial state
-        const currentPath = window.location.pathname;
-        const auth = sessionStorage.getItem('fxTaeAuthenticated') === 'true';
-        
-        // Clear any existing history states that might cause issues
-        if (currentPath.includes('dashboard.html')) {
-            console.log('📊 On dashboard - setting up history');
-            
-            // Replace current state to establish a clean point
-            history.replaceState({ page: 'dashboard', index: 0 }, '', currentPath);
-            
-            // Add a state for back navigation
-            history.pushState({ page: 'dashboard', index: 1 }, '', currentPath);
-            
-        } else {
-            console.log('🏠 On landing page - setting up history');
-            history.replaceState({ page: 'landing', index: 0 }, '', currentPath);
-        }
-        
-        // Override the logout function to clear history
+        // Override logout to ensure clean state
         const originalLogout = window.logout;
         if (originalLogout) {
             window.logout = function() {
-                console.log('🚪 Logging out - clearing history');
-                
-                // Clear all history states
-                history.replaceState(null, '', 'index.html');
-                
-                // Call original logout
+                console.log('🚪 Logging out');
                 const result = originalLogout.apply(this, arguments);
-                
-                // Force replace state again after logout
-                setTimeout(() => {
-                    history.replaceState(null, '', 'index.html');
-                }, 100);
-                
+                // No need to manipulate history - let it work naturally
                 return result;
             };
         }
         
-        // Monitor for forward navigation attempts via keyboard (Alt+Right Arrow, etc.)
-        document.addEventListener('keydown', function(e) {
-            // Check for forward navigation keys
-            if ((e.key === 'ArrowRight' && (e.altKey || e.metaKey)) || 
-                (e.key === 'ArrowRight' && e.ctrlKey) ||
-                (e.key === 'PageDown' && e.altKey)) {
-                console.log('🚫 Forward keyboard shortcut blocked');
-                e.preventDefault();
-                e.stopPropagation();
-                showToast('Forward navigation is disabled', 'warning');
-                return false;
-            }
-            
-            // Allow back navigation keys
-            if ((e.key === 'ArrowLeft' && (e.altKey || e.metaKey)) || 
-                (e.key === 'ArrowLeft' && e.ctrlKey) ||
-                (e.key === 'PageUp' && e.altKey)) {
-                console.log('🔙 Back keyboard shortcut allowed');
-                // Let it happen naturally
-                return true;
-            }
-        });
+        console.log('✅ Navigation control installed!');
+        console.log('🔙 Back button: WORKS (can go to landing page)');
+        console.log('🔜 Forward button: BLOCKED');
+        console.log('📌 Try it: Click back → goes to landing, forward → blocked');
         
-        // Create a simple toast if showToast doesn't exist
-        if (typeof window.showToast !== 'function') {
-            window.showToast = function(message, type) {
-                console.log(`🔔 ${type}: ${message}`);
-                alert(message); // Fallback
-            };
-        }
-        
-        console.log('✅ ULTIMATE navigation control installed!');
-        console.log('🔙 Back: ALLOWED');
-        console.log('🔜 Forward: COMPLETELY BLOCKED');
-        console.log('📌 Try clicking forward button or using Alt+→ - it will be blocked!');
-        
-    }, 500); // Wait half a second
+    }, 500);
 })();
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
