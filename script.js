@@ -2323,474 +2323,259 @@ function getEquityData(period) {
     }
 }
         
-// ===== 🔐 ULTIMATE USER DATA ISOLATION - COMPLETE REWRITE =====
-// Add this at the VERY END of your script.js file - THIS WILL DEFINITELY WORK!
+// ===== 💰 FIX FOR BALANCE DISPLAY AFTER DATA ISOLATION =====
+// Add this at the VERY END of your script.js file
 
 (function() {
-    console.log('🔐 INSTALLING ULTIMATE USER DATA ISOLATION...');
+    console.log('💰 Installing balance display fix...');
     
-    // Wait for everything to load
     setTimeout(function() {
         
-        // ===== HELPER FUNCTIONS =====
-        function getCurrentUserId() {
-            try {
-                const user = JSON.parse(localStorage.getItem('fxTaeCurrentUser') || '{}');
-                return user.id || 'guest';
-            } catch (e) {
-                return 'guest';
-            }
-        }
+        // ===== OVERRIDE THE BALANCE UPDATE FUNCTIONS =====
         
-        function getUserPrefix() {
-            const userId = getCurrentUserId();
-            return `user_${userId}_`;
-        }
-        
-        // ===== COMPLETELY CLEAR ALL GLOBAL DATA ON LOGOUT =====
-        const originalLogout = window.logout;
-        window.logout = function() {
-            console.log('🚪 LOGGING OUT - CLEARING ALL USER DATA');
-            
-            // Clear ALL global variables
-            window.trades = [];
-            window.goals = [];
-            window.deposits = [];
-            window.withdrawals = [];
-            window.startingBalance = 0;
-            window.accountBalance = 0;
-            
-            // Call original logout
-            if (originalLogout) {
-                originalLogout();
-            }
-            
-            console.log('✅ Global data cleared');
-        };
-        
-        // ===== OVERRIDE ALL STORAGE KEYS TO BE USER-SPECIFIC =====
-        const originalGetItem = localStorage.getItem;
-        const originalSetItem = localStorage.setItem;
-        const originalRemoveItem = localStorage.removeItem;
-        
-        // List of all keys that should be user-specific
-        const userSpecificKeys = [
-            'fxTaeTrades',
-            'fxTaeGoals',
-            'fxTaeDeposits',
-            'fxTaeWithdrawals',
-            'fxTaeStartingBalance',
-            'fxTaeTradingRules'
-        ];
-        
-        // Override getItem - FORCE user-specific keys
-        localStorage.getItem = function(key) {
-            // Check if this is a user-specific key
-            if (userSpecificKeys.includes(key)) {
-                const userId = getCurrentUserId();
-                const userKey = `user_${userId}_${key}`;
-                console.log(`🔑 GET: ${key} → ${userKey}`);
-                return originalGetItem.call(this, userKey);
-            }
-            // For non-user-specific keys, return as normal
-            return originalGetItem.call(this, key);
-        };
-        
-        // Override setItem - FORCE user-specific keys
-        localStorage.setItem = function(key, value) {
-            if (userSpecificKeys.includes(key)) {
-                const userId = getCurrentUserId();
-                const userKey = `user_${userId}_${key}`;
-                console.log(`💾 SET: ${key} → ${userKey} = ${value.substring(0, 50)}...`);
-                return originalSetItem.call(this, userKey, value);
-            }
-            return originalSetItem.call(this, key, value);
-        };
-        
-        // Override removeItem - FORCE user-specific keys
-        localStorage.removeItem = function(key) {
-            if (userSpecificKeys.includes(key)) {
-                const userId = getCurrentUserId();
-                const userKey = `user_${userId}_${key}`;
-                console.log(`🗑️ REMOVE: ${key} → ${userKey}`);
-                return originalRemoveItem.call(this, userKey);
-            }
-            return originalRemoveItem.call(this, key);
-        };
-        
-        // ===== COMPLETELY REPLACE ALL DATA LOADING FUNCTIONS =====
-        
-        // Force reload of trades
-        window.loadTrades = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeTrades`;
-            try {
-                const saved = localStorage.getItem(storageKey);
-                window.trades = saved ? JSON.parse(saved) : [];
-                console.log(`📊 User ${userId} has ${window.trades.length} trades`);
-            } catch (e) {
-                window.trades = [];
-            }
-        };
-        
-        window.loadGoals = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeGoals`;
-            try {
-                const saved = localStorage.getItem(storageKey);
-                window.goals = saved ? JSON.parse(saved) : [];
-                console.log(`🎯 User ${userId} has ${window.goals.length} goals`);
-            } catch (e) {
-                window.goals = [];
-            }
-        };
-        
-        window.loadDeposits = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeDeposits`;
-            try {
-                const saved = localStorage.getItem(storageKey);
-                window.deposits = saved ? JSON.parse(saved) : [];
-                console.log(`💰 User ${userId} has ${window.deposits.length} deposits`);
-            } catch (e) {
-                window.deposits = [];
-            }
-        };
-        
-        window.loadWithdrawals = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeWithdrawals`;
-            try {
-                const saved = localStorage.getItem(storageKey);
-                window.withdrawals = saved ? JSON.parse(saved) : [];
-                console.log(`💸 User ${userId} has ${window.withdrawals.length} withdrawals`);
-            } catch (e) {
-                window.withdrawals = [];
-            }
-        };
-        
-        window.loadStartingBalance = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeStartingBalance`;
-            try {
-                const saved = localStorage.getItem(storageKey);
-                window.startingBalance = saved ? parseFloat(saved) : 0;
-                console.log(`💵 User ${userId} starting balance: $${window.startingBalance}`);
-            } catch (e) {
-                window.startingBalance = 0;
-            }
-        };
-        
-        // ===== COMPLETELY REPLACE ALL SAVE FUNCTIONS =====
-        
-        window.saveTrades = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeTrades`;
-            localStorage.setItem(storageKey, JSON.stringify(window.trades));
-            console.log(`💾 Saved ${window.trades.length} trades for user ${userId}`);
-        };
-        
-        window.saveGoals = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeGoals`;
-            localStorage.setItem(storageKey, JSON.stringify(window.goals));
-            console.log(`💾 Saved ${window.goals.length} goals for user ${userId}`);
-        };
-        
-        window.saveDeposits = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeDeposits`;
-            localStorage.setItem(storageKey, JSON.stringify(window.deposits));
-            console.log(`💾 Saved ${window.deposits.length} deposits for user ${userId}`);
-        };
-        
-        window.saveWithdrawals = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeWithdrawals`;
-            localStorage.setItem(storageKey, JSON.stringify(window.withdrawals));
-            console.log(`💾 Saved ${window.withdrawals.length} withdrawals for user ${userId}`);
-        };
-        
-        window.saveStartingBalance = function() {
-            const userId = getCurrentUserId();
-            const storageKey = `user_${userId}_fxTaeStartingBalance`;
-            localStorage.setItem(storageKey, window.startingBalance.toString());
-            console.log(`💾 Saved starting balance $${window.startingBalance} for user ${userId}`);
-        };
-        
-        // ===== OVERRIDE ACCOUNT BALANCE CALCULATION =====
+        // Force correct balance calculation
         window.calculateAccountBalance = function() {
-            const totalPnL = window.trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
-            const totalWithdrawals = window.withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
-            return window.startingBalance + totalPnL - totalWithdrawals;
+            const totalPnL = (window.trades || []).reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
+            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
+            const balance = (parseFloat(window.startingBalance) || 0) + totalPnL - totalWithdrawals;
+            console.log(`💰 Balance calc: Starting $${window.startingBalance} + P&L $${totalPnL} - Withdrawals $${totalWithdrawals} = $${balance}`);
+            return balance;
         };
         
+        // Override loadAccountBalance
         window.loadAccountBalance = function() {
             window.accountBalance = window.calculateAccountBalance();
+            console.log(`💰 Account balance set to: $${window.accountBalance}`);
         };
         
-        // ===== OVERRIDE INITIALIZE DASHBOARD =====
-        const originalInitializeDashboard = window.initializeDashboard;
-        window.initializeDashboard = function() {
-            console.log('📊 INITIALIZING DASHBOARD FOR USER:', getCurrentUserId());
+        // Override updateAccountBalanceDisplay
+        window.updateAccountBalanceDisplay = function() {
+            // Recalculate to be sure
+            window.accountBalance = window.calculateAccountBalance();
             
-            // Check authentication
-            if (!window.isAuthenticated || !window.isAuthenticated()) {
-                window.location.replace('index.html');
-                return;
-            }
+            console.log(`💵 Updating balance displays to: $${window.accountBalance}`);
             
-            // FORCE clear all data first
-            window.trades = [];
-            window.goals = [];
-            window.deposits = [];
-            window.withdrawals = [];
-            window.startingBalance = 0;
-            window.accountBalance = 0;
+            // Update all balance elements
+            const balanceElements = [
+                'accountBalance',
+                'sidebarBalance',
+                'accountBalanceDisplay',
+                'equityTotal'
+            ];
             
-            // Load user-specific data
-            window.loadStartingBalance();
-            window.loadTrades();
-            window.loadGoals();
-            window.loadDeposits();
-            window.loadWithdrawals();
-            window.loadAccountBalance();
-            
-            // Update all displays
-            if (window.updateUserInfo) window.updateUserInfo();
-            if (window.updateAccountBalanceDisplay) window.updateAccountBalanceDisplay();
-            if (window.updateDashboardStats) window.updateDashboardStats();
-            if (window.updateRecentActivity) window.updateRecentActivity();
-            if (window.updateTransactionHistory) window.updateTransactionHistory();
-            if (window.updateAllTradesTable) window.updateAllTradesTable();
-            if (window.updateGoalsList) window.updateGoalsList();
-            if (window.updateCalendar) window.updateCalendar();
-            
-            // Initialize charts
-            setTimeout(() => {
-                if (window.initializeCharts) window.initializeCharts();
-            }, 500);
-            
-            if (window.setTodayDates) window.setTodayDates();
-            if (window.setupEventListeners) window.setupEventListeners();
-            
-            const savedTheme = localStorage.getItem('fxTaeTheme') || 'light';
-            if (window.setTheme) window.setTheme(savedTheme);
-            
-            console.log('✅ DASHBOARD INITIALIZED WITH USER DATA');
-            console.log(`👤 User: ${getCurrentUserId()}`);
-            console.log(`💰 Balance: $${window.accountBalance}`);
-            console.log(`📊 Trades: ${window.trades.length}`);
-        };
-        
-        // ===== OVERRIDE SET CURRENT USER =====
-        const originalSetCurrentUser = window.setCurrentUser;
-        window.setCurrentUser = function(user) {
-            console.log('🔐 SETTING CURRENT USER:', user.email);
-            
-            // Call original
-            const result = originalSetCurrentUser ? originalSetCurrentUser.apply(this, arguments) : null;
-            
-            // FORCE clear all data
-            window.trades = [];
-            window.goals = [];
-            window.deposits = [];
-            window.withdrawals = [];
-            window.startingBalance = 0;
-            window.accountBalance = 0;
-            
-            console.log('✅ User set, data cleared for new user');
-            
-            return result;
-        };
-        
-        // ===== FORCE CLEAR ALL DATA ON PAGE LOAD =====
-        window.addEventListener('load', function() {
-            console.log('📄 Page loaded - clearing any stale data');
-            
-            // Clear all global data
-            window.trades = [];
-            window.goals = [];
-            window.deposits = [];
-            window.withdrawals = [];
-            window.startingBalance = 0;
-            window.accountBalance = 0;
-        });
-        
-        // ===== MIGRATE EXISTING DATA TO USER-SPECIFIC KEYS =====
-        function migrateExistingData() {
-            const userId = getCurrentUserId();
-            if (userId === 'guest') return;
-            
-            console.log('🔄 Checking for data to migrate...');
-            
-            // Check each key for old data
-            userSpecificKeys.forEach(key => {
-                const oldData = localStorage.getItem(key);
-                if (oldData) {
-                    const userKey = `user_${userId}_${key}`;
-                    const existingUserData = localStorage.getItem(userKey);
-                    
-                    // Only migrate if no user data exists
-                    if (!existingUserData) {
-                        localStorage.setItem(userKey, oldData);
-                        console.log(`✅ Migrated ${key} to user ${userId}`);
-                    }
+            balanceElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = '$' + window.accountBalance.toFixed(2);
+                    console.log(`  ✅ Updated ${id} to $${window.accountBalance}`);
+                } else {
+                    console.log(`  ❌ Element ${id} not found`);
                 }
             });
-        }
-        
-        // Run migration
-        setTimeout(migrateExistingData, 1500);
-        
-        // ===== DEBUG: SHOW CURRENT STORAGE STATE =====
-        function showStorageState() {
-            console.log('📦 CURRENT LOCALSTORAGE STATE:');
-            const userId = getCurrentUserId();
-            console.log(`👤 Current User ID: ${userId}`);
             
-            userSpecificKeys.forEach(key => {
-                const userKey = `user_${userId}_${key}`;
-                const data = localStorage.getItem(userKey);
-                console.log(`  ${userKey}:`, data ? '✅ Has data' : '❌ Empty');
-            });
-        }
-        
-        // Show storage state after everything loads
-        setTimeout(showStorageState, 2000);
-        
-        // ===== OVERRIDE LOGIN FORMS =====
-        setTimeout(function() {
-            // Override signup form
-            const signupForm = document.getElementById('signupForm');
-            if (signupForm) {
-                const originalSubmit = signupForm.onsubmit;
-                signupForm.onsubmit = function(e) {
-                    e.preventDefault();
-                    
-                    const name = document.getElementById('signupName')?.value.trim();
-                    const email = document.getElementById('signupEmail')?.value.trim();
-                    const password = document.getElementById('signupPassword')?.value;
-                    const confirmPassword = document.getElementById('confirmPassword')?.value;
-                    
-                    if (!name || !email || !password || !confirmPassword) {
-                        if (window.showToast) window.showToast('Please fill all fields', 'error');
-                        return false;
-                    }
-                    
-                    if (password !== confirmPassword) {
-                        if (window.showToast) window.showToast('Passwords do not match', 'error');
-                        return false;
-                    }
-                    
-                    // Generate unique ID
-                    const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    
-                    const user = {
-                        id: userId,
-                        name: name,
-                        email: email,
-                        password: password,
-                        createdAt: new Date().toISOString()
-                    };
-                    
-                    // Get existing users
-                    const users = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
-                    
-                    // Check if email exists
-                    if (users.some(u => u.email === email)) {
-                        if (window.showToast) window.showToast('Email already registered', 'error');
-                        return false;
-                    }
-                    
-                    // Save user
-                    users.push(user);
-                    localStorage.setItem('fxTaeUsers', JSON.stringify(users));
-                    
-                    // Set current user
-                    const safeUser = {
-                        id: user.id,
-                        name: user.name,
-                        email: user.email,
-                        createdAt: user.createdAt
-                    };
-                    localStorage.setItem('fxTaeCurrentUser', JSON.stringify(safeUser));
-                    sessionStorage.setItem('fxTaeAuthenticated', 'true');
-                    
-                    if (window.showToast) window.showToast('Account created! Redirecting...', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 1500);
-                    
-                    return false;
-                };
+            // Update starting balance display
+            const startEl = document.getElementById('startingBalanceDisplay');
+            if (startEl) {
+                startEl.textContent = '$' + (parseFloat(window.startingBalance) || 0).toFixed(2);
             }
             
-            // Override login form
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                const originalSubmit = loginForm.onsubmit;
-                loginForm.onsubmit = function(e) {
-                    e.preventDefault();
-                    
-                    const email = document.getElementById('loginEmail')?.value.trim();
-                    const password = document.getElementById('loginPassword')?.value;
-                    
-                    if (!email || !password) {
-                        if (window.showToast) window.showToast('Please fill all fields', 'error');
-                        return false;
-                    }
-                    
-                    const users = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
-                    const user = users.find(u => u.email === email && u.password === password);
-                    
-                    if (!user) {
-                        if (window.showToast) window.showToast('Invalid email or password', 'error');
-                        return false;
-                    }
-                    
-                    const safeUser = {
-                        id: user.id,
-                        name: user.name,
-                        email: user.email,
-                        createdAt: user.createdAt
-                    };
-                    localStorage.setItem('fxTaeCurrentUser', JSON.stringify(safeUser));
-                    sessionStorage.setItem('fxTaeAuthenticated', 'true');
-                    
-                    if (window.showToast) window.showToast('Login successful! Redirecting...', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 1500);
-                    
-                    return false;
-                };
+            // Update total deposits
+            const totalDeposits = (window.deposits || []).reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+            const totalDepositsEl = document.getElementById('totalDepositsDisplay');
+            if (totalDepositsEl) {
+                totalDepositsEl.textContent = '$' + totalDeposits.toFixed(2);
             }
-        }, 1000);
+            
+            // Update total withdrawals
+            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
+            const totalWithdrawalsEl = document.getElementById('totalWithdrawalsDisplay');
+            if (totalWithdrawalsEl) {
+                totalWithdrawalsEl.textContent = '$' + totalWithdrawals.toFixed(2);
+            }
+            
+            // Update total growth
+            const totalGrowth = window.accountBalance - (parseFloat(window.startingBalance) || 0);
+            const totalGrowthEl = document.getElementById('totalGrowth');
+            if (totalGrowthEl) {
+                const sign = totalGrowth >= 0 ? '+' : '-';
+                totalGrowthEl.textContent = sign + '$' + Math.abs(totalGrowth).toFixed(2);
+            }
+            
+            // Update growth percentage
+            const growthPercent = window.startingBalance > 0 ? ((window.accountBalance - window.startingBalance) / window.startingBalance * 100).toFixed(1) : 0;
+            const growthPercentageEl = document.getElementById('growthPercentage');
+            if (growthPercentageEl) {
+                growthPercentageEl.textContent = (growthPercent > 0 ? '+' : '') + growthPercent + '%';
+            }
+            
+            // Update dashboard stats
+            if (window.updateDashboardStats) {
+                window.updateDashboardStats();
+            }
+        };
         
-        console.log('✅✅✅ ULTIMATE USER DATA ISOLATION INSTALLED!');
-        console.log('🔐 Each user now has COMPLETELY SEPARATE data');
-        console.log('👤 User FX Tae and Atwine Burellious will have DIFFERENT data');
+        // ===== OVERRIDE SAVE TRADE TO UPDATE BALANCE =====
+        const originalSaveTrade = window.saveTrade;
+        if (originalSaveTrade) {
+            window.saveTrade = function() {
+                console.log('📊 Saving trade with balance fix');
+                
+                // Call original
+                const result = originalSaveTrade.apply(this, arguments);
+                
+                // Force balance update
+                setTimeout(() => {
+                    window.accountBalance = window.calculateAccountBalance();
+                    window.updateAccountBalanceDisplay();
+                    
+                    // Also update recent activity to show correct data
+                    if (window.updateRecentActivity) {
+                        window.updateRecentActivity();
+                    }
+                    
+                    console.log(`💰 Balance after trade: $${window.accountBalance}`);
+                }, 100);
+                
+                return result;
+            };
+        }
         
-        // If we're on dashboard, reload data for current user
+        // ===== OVERRIDE PROCESS DEPOSIT TO UPDATE BALANCE =====
+        const originalProcessDeposit = window.processDeposit;
+        if (originalProcessDeposit) {
+            window.processDeposit = function() {
+                console.log('💰 Processing deposit with balance fix');
+                
+                // Call original
+                const result = originalProcessDeposit.apply(this, arguments);
+                
+                // Force balance update
+                setTimeout(() => {
+                    window.accountBalance = window.calculateAccountBalance();
+                    window.updateAccountBalanceDisplay();
+                    
+                    // Also update recent activity
+                    if (window.updateRecentActivity) {
+                        window.updateRecentActivity();
+                    }
+                    if (window.updateTransactionHistory) {
+                        window.updateTransactionHistory();
+                    }
+                    
+                    console.log(`💰 Balance after deposit: $${window.accountBalance}`);
+                }, 100);
+                
+                return result;
+            };
+        }
+        
+        // ===== OVERRIDE PROCESS WITHDRAWAL TO UPDATE BALANCE =====
+        const originalProcessWithdrawal = window.processWithdrawal;
+        if (originalProcessWithdrawal) {
+            window.processWithdrawal = function() {
+                console.log('💸 Processing withdrawal with balance fix');
+                
+                // Call original
+                const result = originalProcessWithdrawal.apply(this, arguments);
+                
+                // Force balance update
+                setTimeout(() => {
+                    window.accountBalance = window.calculateAccountBalance();
+                    window.updateAccountBalanceDisplay();
+                    
+                    // Also update recent activity
+                    if (window.updateRecentActivity) {
+                        window.updateRecentActivity();
+                    }
+                    if (window.updateTransactionHistory) {
+                        window.updateTransactionHistory();
+                    }
+                    
+                    console.log(`💰 Balance after withdrawal: $${window.accountBalance}`);
+                }, 100);
+                
+                return result;
+            };
+        }
+        
+        // ===== OVERRIDE INITIALIZE DASHBOARD TO SET BALANCE =====
+        const originalInitializeDashboard = window.initializeDashboard;
+        if (originalInitializeDashboard) {
+            window.initializeDashboard = function() {
+                console.log('📊 Initializing dashboard with balance fix');
+                
+                // Call original
+                const result = originalInitializeDashboard.apply(this, arguments);
+                
+                // Force balance update after data loads
+                setTimeout(() => {
+                    window.accountBalance = window.calculateAccountBalance();
+                    window.updateAccountBalanceDisplay();
+                    console.log(`💰 Initial balance set to: $${window.accountBalance}`);
+                }, 500);
+                
+                return result;
+            };
+        }
+        
+        // ===== FIX FOR RECENT ACTIVITY DISPLAY =====
+        const originalUpdateRecentActivity = window.updateRecentActivity;
+        if (originalUpdateRecentActivity) {
+            window.updateRecentActivity = function() {
+                // Call original
+                const result = originalUpdateRecentActivity.apply(this, arguments);
+                
+                // Also update balance to be safe
+                window.accountBalance = window.calculateAccountBalance();
+                
+                return result;
+            };
+        }
+        
+        // ===== FORCE BALANCE UPDATE ON PAGE LOAD =====
         if (window.location.pathname.includes('dashboard.html')) {
             setTimeout(() => {
+                console.log('🔄 Forcing initial balance update');
+                
+                // Make sure we have all data
                 if (window.loadStartingBalance) window.loadStartingBalance();
                 if (window.loadTrades) window.loadTrades();
-                if (window.loadGoals) window.loadGoals();
                 if (window.loadDeposits) window.loadDeposits();
                 if (window.loadWithdrawals) window.loadWithdrawals();
-                if (window.loadAccountBalance) window.loadAccountBalance();
-                if (window.updateAccountBalanceDisplay) window.updateAccountBalanceDisplay();
                 
-                console.log('🔄 Current user data reloaded');
-                showStorageState();
-            }, 500);
+                // Calculate and display balance
+                window.accountBalance = window.calculateAccountBalance();
+                window.updateAccountBalanceDisplay();
+                
+                console.log(`💰 Final balance: $${window.accountBalance}`);
+            }, 1000);
         }
         
-    }, 1000);
+        // ===== DEBUG FUNCTION TO CHECK DATA =====
+        window.checkBalanceData = function() {
+            console.log('🔍 BALANCE DATA CHECK:');
+            console.log(`  Starting Balance: $${window.startingBalance}`);
+            console.log(`  Trades: ${window.trades?.length || 0}`);
+            console.log(`  Deposits: ${window.deposits?.length || 0}`);
+            console.log(`  Withdrawals: ${window.withdrawals?.length || 0}`);
+            
+            const totalPnL = (window.trades || []).reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
+            console.log(`  Total P&L: $${totalPnL}`);
+            
+            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
+            console.log(`  Total Withdrawals: $${totalWithdrawals}`);
+            
+            const calculated = (parseFloat(window.startingBalance) || 0) + totalPnL - totalWithdrawals;
+            console.log(`  Calculated Balance: $${calculated}`);
+            console.log(`  Current accountBalance: $${window.accountBalance}`);
+            
+            return calculated;
+        };
+        
+        console.log('✅ Balance display fix installed!');
+        console.log('💰 Run window.checkBalanceData() to debug balance issues');
+        
+    }, 1500);
 })();
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
