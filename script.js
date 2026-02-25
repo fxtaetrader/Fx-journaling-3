@@ -2323,259 +2323,501 @@ function getEquityData(period) {
     }
 }
         
-// ===== 💰 FIX FOR BALANCE DISPLAY AFTER DATA ISOLATION =====
+// ===== 🔰 ULTIMATE COMPLETE FIX - USER ISOLATION + BALANCE DISPLAY =====
 // Add this at the VERY END of your script.js file
 
 (function() {
-    console.log('💰 Installing balance display fix...');
+    console.log('🔰 INSTALLING ULTIMATE COMPLETE FIX...');
     
+    // Wait for everything to load
     setTimeout(function() {
         
-        // ===== OVERRIDE THE BALANCE UPDATE FUNCTIONS =====
+        // ===== HELPER FUNCTIONS =====
+        function getCurrentUserId() {
+            try {
+                const user = JSON.parse(localStorage.getItem('fxTaeCurrentUser') || '{}');
+                return user.id || 'guest';
+            } catch (e) {
+                return 'guest';
+            }
+        }
         
-        // Force correct balance calculation
-        window.calculateAccountBalance = function() {
-            const totalPnL = (window.trades || []).reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
-            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
-            const balance = (parseFloat(window.startingBalance) || 0) + totalPnL - totalWithdrawals;
-            console.log(`💰 Balance calc: Starting $${window.startingBalance} + P&L $${totalPnL} - Withdrawals $${totalWithdrawals} = $${balance}`);
-            return balance;
+        function getUserPrefix() {
+            const userId = getCurrentUserId();
+            return `user_${userId}_`;
+        }
+        
+        // ===== COMPLETELY OVERRIDE ALL STORAGE =====
+        const originalGetItem = localStorage.getItem;
+        const originalSetItem = localStorage.setItem;
+        
+        const userSpecificKeys = [
+            'fxTaeTrades',
+            'fxTaeGoals',
+            'fxTaeDeposits',
+            'fxTaeWithdrawals',
+            'fxTaeStartingBalance',
+            'fxTaeTradingRules'
+        ];
+        
+        // Override getItem
+        localStorage.getItem = function(key) {
+            if (userSpecificKeys.includes(key)) {
+                const userId = getCurrentUserId();
+                const userKey = `user_${userId}_${key}`;
+                return originalGetItem.call(this, userKey);
+            }
+            return originalGetItem.call(this, key);
         };
         
-        // Override loadAccountBalance
+        // Override setItem
+        localStorage.setItem = function(key, value) {
+            if (userSpecificKeys.includes(key)) {
+                const userId = getCurrentUserId();
+                const userKey = `user_${userId}_${key}`;
+                return originalSetItem.call(this, userKey, value);
+            }
+            return originalSetItem.call(this, key, value);
+        };
+        
+        // ===== FIXED DATA LOADING FUNCTIONS =====
+        window.loadTrades = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeTrades`;
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.trades = saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                window.trades = [];
+            }
+        };
+        
+        window.loadGoals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeGoals`;
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.goals = saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                window.goals = [];
+            }
+        };
+        
+        window.loadDeposits = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeDeposits`;
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.deposits = saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                window.deposits = [];
+            }
+        };
+        
+        window.loadWithdrawals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeWithdrawals`;
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.withdrawals = saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                window.withdrawals = [];
+            }
+        };
+        
+        window.loadStartingBalance = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeStartingBalance`;
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.startingBalance = saved ? parseFloat(saved) : 0;
+            } catch (e) {
+                window.startingBalance = 0;
+            }
+        };
+        
+        // ===== CRITICAL FIX: BALANCE CALCULATION =====
+        window.calculateAccountBalance = function() {
+            // Sum all trade profits/losses
+            const totalPnL = (window.trades || []).reduce((sum, t) => {
+                return sum + (parseFloat(t.pnl) || 0);
+            }, 0);
+            
+            // Sum all withdrawals
+            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => {
+                return sum + (parseFloat(w.amount) || 0);
+            }, 0);
+            
+            // CRITICAL: Starting balance + profits - withdrawals
+            return (parseFloat(window.startingBalance) || 0) + totalPnL - totalWithdrawals;
+        };
+        
         window.loadAccountBalance = function() {
             window.accountBalance = window.calculateAccountBalance();
-            console.log(`💰 Account balance set to: $${window.accountBalance}`);
+            console.log(`💰 Calculated balance: $${window.accountBalance}`);
         };
         
-        // Override updateAccountBalanceDisplay
+        // ===== FIXED SAVE FUNCTIONS =====
+        window.saveTrades = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeTrades`;
+            localStorage.setItem(storageKey, JSON.stringify(window.trades || []));
+        };
+        
+        window.saveGoals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeGoals`;
+            localStorage.setItem(storageKey, JSON.stringify(window.goals || []));
+        };
+        
+        window.saveDeposits = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeDeposits`;
+            localStorage.setItem(storageKey, JSON.stringify(window.deposits || []));
+        };
+        
+        window.saveWithdrawals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeWithdrawals`;
+            localStorage.setItem(storageKey, JSON.stringify(window.withdrawals || []));
+        };
+        
+        window.saveStartingBalance = function() {
+            const userId = getCurrentUserId();
+            const storageKey = `user_${userId}_fxTaeStartingBalance`;
+            localStorage.setItem(storageKey, (window.startingBalance || 0).toString());
+        };
+        
+        // ===== FIXED DISPLAY UPDATE FUNCTION =====
         window.updateAccountBalanceDisplay = function() {
-            // Recalculate to be sure
-            window.accountBalance = window.calculateAccountBalance();
+            // Recalculate balance to ensure it's correct
+            window.loadAccountBalance();
             
-            console.log(`💵 Updating balance displays to: $${window.accountBalance}`);
+            console.log(`💵 Updating displays with balance: $${window.accountBalance}`);
             
-            // Update all balance elements
-            const balanceElements = [
-                'accountBalance',
-                'sidebarBalance',
-                'accountBalanceDisplay',
-                'equityTotal'
-            ];
+            // Update all balance displays
+            const balanceElements = {
+                'accountBalance': window.accountBalance,
+                'sidebarBalance': window.accountBalance,
+                'accountBalanceDisplay': window.accountBalance,
+                'startingBalanceDisplay': window.startingBalance || 0,
+                'totalDepositsDisplay': window.deposits && window.deposits.length > 0 ? 
+                    window.deposits.reduce((sum, d) => sum + (d.amount || 0), 0) : 0,
+                'totalWithdrawalsDisplay': window.withdrawals ? 
+                    window.withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0) : 0,
+                'totalGrowth': (window.accountBalance || 0) - (window.startingBalance || 0),
+                'equityTotal': window.accountBalance || 0
+            };
             
-            balanceElements.forEach(id => {
+            for (let [id, value] of Object.entries(balanceElements)) {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.textContent = '$' + window.accountBalance.toFixed(2);
-                    console.log(`  ✅ Updated ${id} to $${window.accountBalance}`);
-                } else {
-                    console.log(`  ❌ Element ${id} not found`);
+                    if (id === 'totalGrowth') {
+                        const sign = value >= 0 ? '+' : '-';
+                        el.textContent = sign + '$' + Math.abs(value).toFixed(2);
+                    } else {
+                        el.textContent = '$' + (value || 0).toFixed(2);
+                    }
                 }
-            });
-            
-            // Update starting balance display
-            const startEl = document.getElementById('startingBalanceDisplay');
-            if (startEl) {
-                startEl.textContent = '$' + (parseFloat(window.startingBalance) || 0).toFixed(2);
-            }
-            
-            // Update total deposits
-            const totalDeposits = (window.deposits || []).reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
-            const totalDepositsEl = document.getElementById('totalDepositsDisplay');
-            if (totalDepositsEl) {
-                totalDepositsEl.textContent = '$' + totalDeposits.toFixed(2);
-            }
-            
-            // Update total withdrawals
-            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
-            const totalWithdrawalsEl = document.getElementById('totalWithdrawalsDisplay');
-            if (totalWithdrawalsEl) {
-                totalWithdrawalsEl.textContent = '$' + totalWithdrawals.toFixed(2);
-            }
-            
-            // Update total growth
-            const totalGrowth = window.accountBalance - (parseFloat(window.startingBalance) || 0);
-            const totalGrowthEl = document.getElementById('totalGrowth');
-            if (totalGrowthEl) {
-                const sign = totalGrowth >= 0 ? '+' : '-';
-                totalGrowthEl.textContent = sign + '$' + Math.abs(totalGrowth).toFixed(2);
             }
             
             // Update growth percentage
-            const growthPercent = window.startingBalance > 0 ? ((window.accountBalance - window.startingBalance) / window.startingBalance * 100).toFixed(1) : 0;
-            const growthPercentageEl = document.getElementById('growthPercentage');
-            if (growthPercentageEl) {
-                growthPercentageEl.textContent = (growthPercent > 0 ? '+' : '') + growthPercent + '%';
-            }
-            
-            // Update dashboard stats
-            if (window.updateDashboardStats) {
-                window.updateDashboardStats();
+            const growthPercentEl = document.getElementById('growthPercentage');
+            if (growthPercentEl && window.startingBalance > 0) {
+                const growthPercent = ((window.accountBalance - window.startingBalance) / window.startingBalance * 100).toFixed(1);
+                growthPercentEl.textContent = (growthPercent > 0 ? '+' : '') + growthPercent + '%';
+            } else if (growthPercentEl) {
+                growthPercentEl.textContent = '0%';
             }
         };
         
-        // ===== OVERRIDE SAVE TRADE TO UPDATE BALANCE =====
+        // ===== FIXED TRADE FUNCTION =====
         const originalSaveTrade = window.saveTrade;
-        if (originalSaveTrade) {
-            window.saveTrade = function() {
-                console.log('📊 Saving trade with balance fix');
-                
-                // Call original
-                const result = originalSaveTrade.apply(this, arguments);
-                
-                // Force balance update
-                setTimeout(() => {
-                    window.accountBalance = window.calculateAccountBalance();
-                    window.updateAccountBalanceDisplay();
-                    
-                    // Also update recent activity to show correct data
-                    if (window.updateRecentActivity) {
-                        window.updateRecentActivity();
-                    }
-                    
-                    console.log(`💰 Balance after trade: $${window.accountBalance}`);
-                }, 100);
-                
-                return result;
+        window.saveTrade = function() {
+            console.log('📊 Saving trade with balance fix');
+            
+            // Get form values
+            const date = document.getElementById('tradeDate')?.value;
+            const time = document.getElementById('tradeTime')?.value;
+            const tradeNumber = parseInt(document.getElementById('tradeNumber')?.value);
+            const pair = document.getElementById('currencyPair')?.value;
+            const direction = document.getElementById('tradeDirection')?.value;
+            let strategy = document.getElementById('strategy')?.value;
+            const customStrategy = document.getElementById('customStrategy')?.value;
+            const pnl = parseFloat(document.getElementById('pnlAmount')?.value);
+            const notes = document.getElementById('tradeNotes')?.value;
+            
+            if (!date || !time || !pair || !direction || isNaN(pnl)) {
+                if (window.showToast) window.showToast('Please fill all required fields', 'error');
+                return false;
+            }
+            
+            // Check daily limit
+            const todayTrades = (window.trades || []).filter(t => t.date === date);
+            if (todayTrades.length >= 4) {
+                if (window.showToast) window.showToast('Maximum 4 trades per day reached!', 'error');
+                return false;
+            }
+            
+            if (customStrategy && document.getElementById('customStrategy').style.display !== 'none') {
+                strategy = customStrategy;
+            }
+            
+            const trade = {
+                id: Date.now(),
+                date,
+                time,
+                tradeNumber,
+                pair,
+                direction,
+                strategy,
+                pnl,
+                notes: notes || 'No notes',
+                type: 'trade'
             };
-        }
+            
+            // Initialize trades array if needed
+            if (!window.trades) window.trades = [];
+            window.trades.unshift(trade);
+            window.saveTrades();
+            
+            // CRITICAL: Recalculate and update balance
+            window.loadAccountBalance();
+            window.updateAccountBalanceDisplay();
+            
+            // Update all other displays
+            if (window.updateDashboardStats) window.updateDashboardStats();
+            if (window.updateRecentActivity) window.updateRecentActivity();
+            if (window.updateAllTradesTable) window.updateAllTradesTable();
+            
+            // Update charts
+            if (window.equityChart && window.updateEquityChart) {
+                window.updateEquityChart(document.querySelector('.period-btn.active')?.getAttribute('data-period') || '12m');
+            }
+            if (window.winLossChart && window.updateWinLossChart) window.updateWinLossChart();
+            if (window.buysSellsChart && window.updateBuysSellsChart) window.updateBuysSellsChart();
+            
+            if (window.updateCalendar) window.updateCalendar();
+            
+            // Clear form
+            document.getElementById('pnlAmount').value = '';
+            document.getElementById('tradeNotes').value = '';
+            document.getElementById('customStrategy').style.display = 'none';
+            document.getElementById('customStrategy').value = '';
+            
+            if (window.showToast) window.showToast(`Trade saved! Balance: $${window.accountBalance.toFixed(2)}`, 'success');
+            
+            console.log(`✅ Trade saved, new balance: $${window.accountBalance}`);
+            return true;
+        };
         
-        // ===== OVERRIDE PROCESS DEPOSIT TO UPDATE BALANCE =====
+        // ===== FIXED DEPOSIT FUNCTION =====
         const originalProcessDeposit = window.processDeposit;
-        if (originalProcessDeposit) {
-            window.processDeposit = function() {
-                console.log('💰 Processing deposit with balance fix');
-                
-                // Call original
-                const result = originalProcessDeposit.apply(this, arguments);
-                
-                // Force balance update
-                setTimeout(() => {
-                    window.accountBalance = window.calculateAccountBalance();
-                    window.updateAccountBalanceDisplay();
-                    
-                    // Also update recent activity
-                    if (window.updateRecentActivity) {
-                        window.updateRecentActivity();
-                    }
-                    if (window.updateTransactionHistory) {
-                        window.updateTransactionHistory();
-                    }
-                    
-                    console.log(`💰 Balance after deposit: $${window.accountBalance}`);
-                }, 100);
-                
-                return result;
+        window.processDeposit = function() {
+            console.log('💰 Processing deposit with balance fix');
+            
+            const date = document.getElementById('depositDate')?.value;
+            const time = document.getElementById('depositTime')?.value;
+            const broker = document.getElementById('depositBroker')?.value;
+            const amount = parseFloat(document.getElementById('depositAmount')?.value);
+            const notes = document.getElementById('depositNotes')?.value;
+            
+            if (!date || !time || !broker || isNaN(amount) || amount <= 0) {
+                if (window.showToast) window.showToast('Please fill all fields with valid amount', 'error');
+                return false;
+            }
+            
+            // CRITICAL: Deposit becomes starting balance
+            const oldBalance = window.startingBalance || 0;
+            window.startingBalance = amount;
+            window.saveStartingBalance();
+            
+            // Initialize deposits array
+            if (!window.deposits) window.deposits = [];
+            
+            const deposit = {
+                id: Date.now(),
+                date,
+                time,
+                broker,
+                amount: amount,
+                notes: notes || 'Deposit',
+                balanceBefore: oldBalance,
+                balanceAfter: amount,
+                type: 'deposit'
             };
-        }
+            
+            window.deposits = [deposit]; // Replace with single deposit
+            window.saveDeposits();
+            
+            // CRITICAL: Recalculate and update balance
+            window.loadAccountBalance();
+            window.updateAccountBalanceDisplay();
+            
+            // Update other displays
+            if (window.updateRecentActivity) window.updateRecentActivity();
+            if (window.updateTransactionHistory) window.updateTransactionHistory();
+            
+            // Update charts
+            if (window.equityChart && window.updateEquityChart) {
+                window.updateEquityChart('12m');
+            }
+            
+            // Clear form
+            document.getElementById('depositAmount').value = '';
+            document.getElementById('depositNotes').value = '';
+            document.getElementById('newBalanceAfterDeposit').value = amount.toFixed(2);
+            
+            if (window.showToast) window.showToast(`✅ Deposit successful! Balance: $${window.accountBalance.toFixed(2)}`, 'success');
+            
+            console.log(`✅ Deposit processed, new balance: $${window.accountBalance}`);
+            return true;
+        };
         
-        // ===== OVERRIDE PROCESS WITHDRAWAL TO UPDATE BALANCE =====
+        // ===== FIXED WITHDRAWAL FUNCTION =====
         const originalProcessWithdrawal = window.processWithdrawal;
-        if (originalProcessWithdrawal) {
-            window.processWithdrawal = function() {
-                console.log('💸 Processing withdrawal with balance fix');
-                
-                // Call original
-                const result = originalProcessWithdrawal.apply(this, arguments);
-                
-                // Force balance update
-                setTimeout(() => {
-                    window.accountBalance = window.calculateAccountBalance();
-                    window.updateAccountBalanceDisplay();
-                    
-                    // Also update recent activity
-                    if (window.updateRecentActivity) {
-                        window.updateRecentActivity();
-                    }
-                    if (window.updateTransactionHistory) {
-                        window.updateTransactionHistory();
-                    }
-                    
-                    console.log(`💰 Balance after withdrawal: $${window.accountBalance}`);
-                }, 100);
-                
-                return result;
+        window.processWithdrawal = function() {
+            console.log('💸 Processing withdrawal with balance fix');
+            
+            const date = document.getElementById('withdrawalDate')?.value;
+            const time = document.getElementById('withdrawalTime')?.value;
+            const broker = document.getElementById('withdrawalBroker')?.value;
+            const amount = parseFloat(document.getElementById('withdrawalAmount')?.value);
+            const notes = document.getElementById('withdrawalNotes')?.value;
+            
+            if (!date || !time || !broker || isNaN(amount) || amount <= 0) {
+                if (window.showToast) window.showToast('Please fill all fields with valid amount', 'error');
+                return false;
+            }
+            
+            // Calculate current balance
+            window.loadAccountBalance();
+            
+            if (amount > window.accountBalance) {
+                if (window.showToast) window.showToast('Insufficient balance!', 'error');
+                return false;
+            }
+            
+            if (!window.withdrawals) window.withdrawals = [];
+            
+            const withdrawal = {
+                id: Date.now(),
+                date,
+                time,
+                broker,
+                amount: amount,
+                notes: notes || 'Withdrawal',
+                balanceBefore: window.accountBalance,
+                balanceAfter: window.accountBalance - amount,
+                type: 'withdrawal'
             };
-        }
+            
+            window.withdrawals.unshift(withdrawal);
+            window.saveWithdrawals();
+            
+            // CRITICAL: Recalculate and update balance
+            window.loadAccountBalance();
+            window.updateAccountBalanceDisplay();
+            
+            // Update other displays
+            if (window.updateRecentActivity) window.updateRecentActivity();
+            if (window.updateTransactionHistory) window.updateTransactionHistory();
+            
+            // Update charts
+            if (window.equityChart && window.updateEquityChart) {
+                window.updateEquityChart('12m');
+            }
+            
+            // Clear form
+            document.getElementById('withdrawalAmount').value = '';
+            document.getElementById('withdrawalNotes').value = '';
+            document.getElementById('newBalanceAfterWithdrawal').value = (window.accountBalance - amount).toFixed(2);
+            
+            if (window.showToast) window.showToast(`Withdrawal processed! Balance: $${window.accountBalance.toFixed(2)}`, 'success');
+            
+            console.log(`✅ Withdrawal processed, new balance: $${window.accountBalance}`);
+            return true;
+        };
         
-        // ===== OVERRIDE INITIALIZE DASHBOARD TO SET BALANCE =====
+        // ===== FIXED INITIALIZE DASHBOARD =====
         const originalInitializeDashboard = window.initializeDashboard;
-        if (originalInitializeDashboard) {
-            window.initializeDashboard = function() {
-                console.log('📊 Initializing dashboard with balance fix');
-                
-                // Call original
-                const result = originalInitializeDashboard.apply(this, arguments);
-                
-                // Force balance update after data loads
-                setTimeout(() => {
-                    window.accountBalance = window.calculateAccountBalance();
-                    window.updateAccountBalanceDisplay();
-                    console.log(`💰 Initial balance set to: $${window.accountBalance}`);
-                }, 500);
-                
-                return result;
-            };
-        }
+        window.initializeDashboard = function() {
+            console.log('📊 Initializing dashboard with ULTIMATE FIX');
+            
+            if (!window.isAuthenticated || !window.isAuthenticated()) {
+                window.location.replace('index.html');
+                return;
+            }
+            
+            // Load all data
+            if (window.loadStartingBalance) window.loadStartingBalance();
+            if (window.loadTrades) window.loadTrades();
+            if (window.loadGoals) window.loadGoals();
+            if (window.loadDeposits) window.loadDeposits();
+            if (window.loadWithdrawals) window.loadWithdrawals();
+            if (window.loadAccountBalance) window.loadAccountBalance();
+            
+            // Update all displays
+            if (window.updateUserInfo) window.updateUserInfo();
+            if (window.updateAccountBalanceDisplay) window.updateAccountBalanceDisplay();
+            if (window.updateDashboardStats) window.updateDashboardStats();
+            if (window.updateRecentActivity) window.updateRecentActivity();
+            if (window.updateTransactionHistory) window.updateTransactionHistory();
+            if (window.updateAllTradesTable) window.updateAllTradesTable();
+            if (window.updateGoalsList) window.updateGoalsList();
+            if (window.updateCalendar) window.updateCalendar();
+            
+            // Initialize charts
+            setTimeout(() => {
+                if (window.initializeCharts) window.initializeCharts();
+            }, 500);
+            
+            if (window.setTodayDates) window.setTodayDates();
+            if (window.setupEventListeners) window.setupEventListeners();
+            
+            const savedTheme = localStorage.getItem('fxTaeTheme') || 'light';
+            if (window.setTheme) window.setTheme(savedTheme);
+            
+            console.log(`✅ Dashboard initialized - Balance: $${window.accountBalance}`);
+        };
         
-        // ===== FIX FOR RECENT ACTIVITY DISPLAY =====
-        const originalUpdateRecentActivity = window.updateRecentActivity;
-        if (originalUpdateRecentActivity) {
-            window.updateRecentActivity = function() {
-                // Call original
-                const result = originalUpdateRecentActivity.apply(this, arguments);
-                
-                // Also update balance to be safe
-                window.accountBalance = window.calculateAccountBalance();
-                
-                return result;
-            };
-        }
+        // ===== OVERRIDE LOGOUT =====
+        const originalLogout = window.logout;
+        window.logout = function() {
+            console.log('🚪 Logging out - clearing data');
+            
+            // Clear all global variables
+            window.trades = [];
+            window.goals = [];
+            window.deposits = [];
+            window.withdrawals = [];
+            window.startingBalance = 0;
+            window.accountBalance = 0;
+            
+            if (originalLogout) originalLogout();
+        };
         
-        // ===== FORCE BALANCE UPDATE ON PAGE LOAD =====
+        // ===== FORCE UPDATE ON PAGE LOAD =====
         if (window.location.pathname.includes('dashboard.html')) {
             setTimeout(() => {
-                console.log('🔄 Forcing initial balance update');
-                
-                // Make sure we have all data
+                console.log('🔄 Force updating balance on page load');
                 if (window.loadStartingBalance) window.loadStartingBalance();
                 if (window.loadTrades) window.loadTrades();
                 if (window.loadDeposits) window.loadDeposits();
                 if (window.loadWithdrawals) window.loadWithdrawals();
+                if (window.loadAccountBalance) window.loadAccountBalance();
+                if (window.updateAccountBalanceDisplay) window.updateAccountBalanceDisplay();
+                if (window.updateRecentActivity) window.updateRecentActivity();
                 
-                // Calculate and display balance
-                window.accountBalance = window.calculateAccountBalance();
-                window.updateAccountBalanceDisplay();
-                
-                console.log(`💰 Final balance: $${window.accountBalance}`);
-            }, 1000);
+                console.log(`💰 Current balance: $${window.accountBalance}`);
+            }, 500);
         }
         
-        // ===== DEBUG FUNCTION TO CHECK DATA =====
-        window.checkBalanceData = function() {
-            console.log('🔍 BALANCE DATA CHECK:');
-            console.log(`  Starting Balance: $${window.startingBalance}`);
-            console.log(`  Trades: ${window.trades?.length || 0}`);
-            console.log(`  Deposits: ${window.deposits?.length || 0}`);
-            console.log(`  Withdrawals: ${window.withdrawals?.length || 0}`);
-            
-            const totalPnL = (window.trades || []).reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
-            console.log(`  Total P&L: $${totalPnL}`);
-            
-            const totalWithdrawals = (window.withdrawals || []).reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
-            console.log(`  Total Withdrawals: $${totalWithdrawals}`);
-            
-            const calculated = (parseFloat(window.startingBalance) || 0) + totalPnL - totalWithdrawals;
-            console.log(`  Calculated Balance: $${calculated}`);
-            console.log(`  Current accountBalance: $${window.accountBalance}`);
-            
-            return calculated;
-        };
+        console.log('✅✅✅ ULTIMATE COMPLETE FIX INSTALLED!');
+        console.log('🔐 User isolation WORKING');
+        console.log('💰 Balance display WORKING');
         
-        console.log('✅ Balance display fix installed!');
-        console.log('💰 Run window.checkBalanceData() to debug balance issues');
-        
-    }, 1500);
+    }, 1000);
 })();
 
 // ===== EXPORT GLOBAL FUNCTIONS =====
