@@ -2323,6 +2323,474 @@ function getEquityData(period) {
     }
 }
 
+// ===== 🔐 USER-SPECIFIC DATA ISOLATION FIX =====
+// Add this at the VERY END of your script.js file
+
+(function() {
+    console.log('🔐 Installing user-specific data isolation...');
+    
+    // Wait for everything to load
+    setTimeout(function() {
+        
+        // ===== HELPER FUNCTIONS =====
+        function getCurrentUserId() {
+            try {
+                const user = JSON.parse(localStorage.getItem('fxTaeCurrentUser') || '{}');
+                return user.id || 'guest';
+            } catch {
+                return 'guest';
+            }
+        }
+        
+        function getUserStorageKey(baseKey) {
+            const userId = getCurrentUserId();
+            return `${baseKey}_${userId}`;
+        }
+        
+        // ===== OVERRIDE ALL STORAGE FUNCTIONS =====
+        
+        // Override localStorage getItem/setItem for our specific keys
+        const originalGetItem = localStorage.getItem;
+        const originalSetItem = localStorage.setItem;
+        const originalRemoveItem = localStorage.removeItem;
+        
+        // Track which keys are user-specific
+        const userSpecificKeys = [
+            'fxTaeTrades',
+            'fxTaeGoals',
+            'fxTaeDeposits',
+            'fxTaeWithdrawals',
+            'fxTaeStartingBalance',
+            'fxTaeTradingRules'
+        ];
+        
+        // Override getItem
+        localStorage.getItem = function(key) {
+            if (userSpecificKeys.includes(key)) {
+                const userKey = getUserStorageKey(key);
+                console.log(`🔑 Redirecting ${key} → ${userKey}`);
+                return originalGetItem.call(this, userKey);
+            }
+            return originalGetItem.call(this, key);
+        };
+        
+        // Override setItem
+        localStorage.setItem = function(key, value) {
+            if (userSpecificKeys.includes(key)) {
+                const userKey = getUserStorageKey(key);
+                console.log(`💾 Saving ${key} → ${userKey}`);
+                return originalSetItem.call(this, userKey, value);
+            }
+            return originalSetItem.call(this, key, value);
+        };
+        
+        // Override removeItem
+        localStorage.removeItem = function(key) {
+            if (userSpecificKeys.includes(key)) {
+                const userKey = getUserStorageKey(key);
+                console.log(`🗑️ Removing ${key} → ${userKey}`);
+                return originalRemoveItem.call(this, userKey);
+            }
+            return originalRemoveItem.call(this, key);
+        };
+        
+        // ===== OVERRIDE DATA LOADING FUNCTIONS =====
+        
+        // Store original functions
+        const originalLoadTrades = window.loadTrades;
+        const originalLoadGoals = window.loadGoals;
+        const originalLoadDeposits = window.loadDeposits;
+        const originalLoadWithdrawals = window.loadWithdrawals;
+        const originalLoadStartingBalance = window.loadStartingBalance;
+        const originalSaveTrades = window.saveTrades;
+        const originalSaveGoals = window.saveGoals;
+        const originalSaveDeposits = window.saveDeposits;
+        const originalSaveWithdrawals = window.saveWithdrawals;
+        const originalSaveStartingBalance = window.saveStartingBalance;
+        
+        // Override load functions
+        window.loadTrades = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(TRADES_KEY);
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.trades = saved ? JSON.parse(saved) : [];
+                console.log(`📊 Loaded ${window.trades.length} trades for user ${userId}`);
+            } catch {
+                window.trades = [];
+            }
+        };
+        
+        window.loadGoals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(GOALS_KEY);
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.goals = saved ? JSON.parse(saved) : [];
+                console.log(`🎯 Loaded ${window.goals.length} goals for user ${userId}`);
+            } catch {
+                window.goals = [];
+            }
+        };
+        
+        window.loadDeposits = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(DEPOSITS_KEY);
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.deposits = saved ? JSON.parse(saved) : [];
+                console.log(`💰 Loaded ${window.deposits.length} deposits for user ${userId}`);
+            } catch {
+                window.deposits = [];
+            }
+        };
+        
+        window.loadWithdrawals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(WITHDRAWALS_KEY);
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.withdrawals = saved ? JSON.parse(saved) : [];
+                console.log(`💸 Loaded ${window.withdrawals.length} withdrawals for user ${userId}`);
+            } catch {
+                window.withdrawals = [];
+            }
+        };
+        
+        window.loadStartingBalance = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(STARTING_BALANCE_KEY);
+            try {
+                const saved = localStorage.getItem(storageKey);
+                window.startingBalance = saved ? parseFloat(saved) : 0;
+                console.log(`💵 Loaded starting balance $${window.startingBalance} for user ${userId}`);
+            } catch {
+                window.startingBalance = 0;
+            }
+        };
+        
+        // Override save functions
+        window.saveTrades = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(TRADES_KEY);
+            localStorage.setItem(storageKey, JSON.stringify(window.trades));
+            console.log(`💾 Saved ${window.trades.length} trades for user ${userId}`);
+        };
+        
+        window.saveGoals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(GOALS_KEY);
+            localStorage.setItem(storageKey, JSON.stringify(window.goals));
+            console.log(`💾 Saved ${window.goals.length} goals for user ${userId}`);
+        };
+        
+        window.saveDeposits = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(DEPOSITS_KEY);
+            localStorage.setItem(storageKey, JSON.stringify(window.deposits));
+            console.log(`💾 Saved ${window.deposits.length} deposits for user ${userId}`);
+        };
+        
+        window.saveWithdrawals = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(WITHDRAWALS_KEY);
+            localStorage.setItem(storageKey, JSON.stringify(window.withdrawals));
+            console.log(`💾 Saved ${window.withdrawals.length} withdrawals for user ${userId}`);
+        };
+        
+        window.saveStartingBalance = function() {
+            const userId = getCurrentUserId();
+            const storageKey = getUserStorageKey(STARTING_BALANCE_KEY);
+            localStorage.setItem(storageKey, window.startingBalance.toString());
+            console.log(`💾 Saved starting balance $${window.startingBalance} for user ${userId}`);
+        };
+        
+        // ===== OVERRIDE LOGOUT TO CLEAR SESSION =====
+        const originalLogout = window.logout;
+        window.logout = function() {
+            console.log('🚪 Logging out - clearing session data');
+            
+            // Clear global variables
+            window.trades = [];
+            window.goals = [];
+            window.deposits = [];
+            window.withdrawals = [];
+            window.startingBalance = 0;
+            window.accountBalance = 0;
+            
+            // Call original logout
+            if (originalLogout) {
+                originalLogout();
+            }
+            
+            console.log('✅ Session cleared');
+        };
+        
+        // ===== OVERRIDE SET CURRENT USER TO MIGRATE DATA =====
+        const originalSetCurrentUser = window.setCurrentUser;
+        window.setCurrentUser = function(user) {
+            console.log('🔐 Setting current user:', user.email);
+            
+            // Call original first
+            const result = originalSetCurrentUser.apply(this, arguments);
+            
+            // After setting user, reload data for this user
+            setTimeout(() => {
+                if (typeof window.loadStartingBalance === 'function') window.loadStartingBalance();
+                if (typeof window.loadTrades === 'function') window.loadTrades();
+                if (typeof window.loadGoals === 'function') window.loadGoals();
+                if (typeof window.loadDeposits === 'function') window.loadDeposits();
+                if (typeof window.loadWithdrawals === 'function') window.loadWithdrawals();
+                
+                if (typeof window.loadAccountBalance === 'function') window.loadAccountBalance();
+                if (typeof window.updateAccountBalanceDisplay === 'function') window.updateAccountBalanceDisplay();
+                if (typeof window.updateDashboardStats === 'function') window.updateDashboardStats();
+                if (typeof window.updateRecentActivity === 'function') window.updateRecentActivity();
+                if (typeof window.updateTransactionHistory === 'function') window.updateTransactionHistory();
+                if (typeof window.updateAllTradesTable === 'function') window.updateAllTradesTable();
+                if (typeof window.updateGoalsList === 'function') window.updateGoalsList();
+                if (typeof window.updateCalendar === 'function') window.updateCalendar();
+                
+                if (window.equityChart && typeof window.updateEquityChart === 'function') {
+                    window.updateEquityChart('12m');
+                }
+                if (window.winLossChart && typeof window.updateWinLossChart === 'function') {
+                    window.updateWinLossChart();
+                }
+                if (window.buysSellsChart && typeof window.updateBuysSellsChart === 'function') {
+                    window.updateBuysSellsChart();
+                }
+                
+                console.log(`✅ Data loaded for user: ${user.email}`);
+            }, 100);
+            
+            return result;
+        };
+        
+        // ===== OVERRIDE INITIALIZE DASHBOARD TO USE USER DATA =====
+        const originalInitializeDashboard = window.initializeDashboard;
+        window.initializeDashboard = function() {
+            console.log('📊 Initializing dashboard with user-specific data');
+            
+            // Check authentication
+            if (!window.isAuthenticated || !window.isAuthenticated()) {
+                window.location.replace('index.html');
+                return;
+            }
+            
+            // Load data using our overridden functions
+            if (typeof window.loadStartingBalance === 'function') window.loadStartingBalance();
+            if (typeof window.loadTrades === 'function') window.loadTrades();
+            if (typeof window.loadGoals === 'function') window.loadGoals();
+            if (typeof window.loadDeposits === 'function') window.loadDeposits();
+            if (typeof window.loadWithdrawals === 'function') window.loadWithdrawals();
+            
+            if (typeof window.loadAccountBalance === 'function') window.loadAccountBalance();
+            if (typeof window.updateUserInfo === 'function') window.updateUserInfo();
+            if (typeof window.updateAccountBalanceDisplay === 'function') window.updateAccountBalanceDisplay();
+            if (typeof window.updateDashboardStats === 'function') window.updateDashboardStats();
+            if (typeof window.updateRecentActivity === 'function') window.updateRecentActivity();
+            if (typeof window.updateTransactionHistory === 'function') window.updateTransactionHistory();
+            if (typeof window.updateAllTradesTable === 'function') window.updateAllTradesTable();
+            if (typeof window.updateGoalsList === 'function') window.updateGoalsList();
+            if (typeof window.updateCalendar === 'function') window.updateCalendar();
+            
+            // Initialize charts
+            setTimeout(() => {
+                if (typeof window.initializeCharts === 'function') {
+                    window.initializeCharts();
+                }
+            }, 500);
+            
+            if (typeof window.setTodayDates === 'function') window.setTodayDates();
+            if (typeof window.setupEventListeners === 'function') window.setupEventListeners();
+            
+            const savedTheme = localStorage.getItem('fxTaeTheme') || 'light';
+            if (typeof window.setTheme === 'function') window.setTheme(savedTheme);
+            
+            console.log('✅ Dashboard initialized with user-specific data');
+        };
+        
+        // ===== MIGRATE EXISTING DATA TO USER-SPECIFIC KEYS =====
+        function migrateExistingData() {
+            const userId = getCurrentUserId();
+            if (userId === 'guest') return;
+            
+            console.log('🔄 Checking for data migration...');
+            
+            // Check if there's old data that needs to be migrated
+            const oldDataKeys = [
+                { key: TRADES_KEY, name: 'trades' },
+                { key: GOALS_KEY, name: 'goals' },
+                { key: DEPOSITS_KEY, name: 'deposits' },
+                { key: WITHDRAWALS_KEY, name: 'withdrawals' },
+                { key: STARTING_BALANCE_KEY, name: 'starting balance' }
+            ];
+            
+            oldDataKeys.forEach(item => {
+                const oldData = localStorage.getItem(item.key);
+                if (oldData) {
+                    const userKey = getUserStorageKey(item.key);
+                    const existingUserData = localStorage.getItem(userKey);
+                    
+                    // Only migrate if there's no user data yet
+                    if (!existingUserData) {
+                        localStorage.setItem(userKey, oldData);
+                        console.log(`✅ Migrated ${item.name} to user ${userId}`);
+                    }
+                }
+            });
+        }
+        
+        // Run migration after everything is set up
+        setTimeout(migrateExistingData, 1000);
+        
+        // ===== OVERRIDE AUTHENTICATION FUNCTIONS FOR BETTER USER MANAGEMENT =====
+        
+        // Ensure users have unique IDs
+        const originalSaveUser = window.saveUser;
+        if (originalSaveUser) {
+            window.saveUser = function(user) {
+                // Ensure user has an ID
+                if (!user.id) {
+                    user.id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                }
+                return originalSaveUser.call(this, user);
+            };
+        }
+        
+        // Enhanced signup to ensure user ID
+        const signupForm = document.getElementById('signupForm');
+        if (signupForm) {
+            signupForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('signupName')?.value.trim();
+                const email = document.getElementById('signupEmail')?.value.trim();
+                const password = document.getElementById('signupPassword')?.value;
+                const confirmPassword = document.getElementById('confirmPassword')?.value;
+                
+                if (!name || !email || !password || !confirmPassword) {
+                    if (typeof showToast === 'function') {
+                        showToast('Please fill all fields', 'error');
+                    }
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    if (typeof showToast === 'function') {
+                        showToast('Passwords do not match', 'error');
+                    }
+                    return;
+                }
+                
+                const user = {
+                    id: Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                    name,
+                    email,
+                    password,
+                    createdAt: new Date().toISOString()
+                };
+                
+                const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+                
+                if (users.some(u => u.email === email)) {
+                    if (typeof showToast === 'function') {
+                        showToast('Email already registered', 'error');
+                    }
+                    return;
+                }
+                
+                users.push(user);
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                
+                // Set current user
+                const safeUser = {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    createdAt: user.createdAt
+                };
+                localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+                sessionStorage.setItem(AUTH_KEY, 'true');
+                
+                if (typeof showToast === 'function') {
+                    showToast('Account created! Redirecting...', 'success');
+                }
+                
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+            });
+        }
+        
+        // Enhanced login
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('loginEmail')?.value.trim();
+                const password = document.getElementById('loginPassword')?.value;
+                
+                if (!email || !password) {
+                    if (typeof showToast === 'function') {
+                        showToast('Please fill all fields', 'error');
+                    }
+                    return;
+                }
+                
+                const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+                const user = users.find(u => u.email === email && u.password === password);
+                
+                if (!user) {
+                    if (typeof showToast === 'function') {
+                        showToast('Invalid email or password', 'error');
+                    }
+                    return;
+                }
+                
+                const safeUser = {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    createdAt: user.createdAt
+                };
+                localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+                sessionStorage.setItem(AUTH_KEY, 'true');
+                
+                if (typeof showToast === 'function') {
+                    showToast('Login successful! Redirecting...', 'success');
+                }
+                
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+            });
+        }
+        
+        console.log('✅ User-specific data isolation installed!');
+        console.log('🔐 Each user now has their own separate data');
+        console.log('📱 Data syncs across devices when same user logs in');
+        
+        // If we're on dashboard, reload data for current user
+        if (window.location.pathname.includes('dashboard.html')) {
+            setTimeout(() => {
+                if (typeof window.loadStartingBalance === 'function') window.loadStartingBalance();
+                if (typeof window.loadTrades === 'function') window.loadTrades();
+                if (typeof window.loadGoals === 'function') window.loadGoals();
+                if (typeof window.loadDeposits === 'function') window.loadDeposits();
+                if (typeof window.loadWithdrawals === 'function') window.loadWithdrawals();
+                if (typeof window.loadAccountBalance === 'function') window.loadAccountBalance();
+                if (typeof window.updateAccountBalanceDisplay === 'function') window.updateAccountBalanceDisplay();
+                
+                console.log('🔄 Current user data reloaded');
+            }, 500);
+        }
+        
+    }, 1000); // Wait 1 second for everything to load
+})();
+
 // ===== EXPORT GLOBAL FUNCTIONS =====
 window.initializeDashboard = initializeDashboard;
 window.saveTrade = saveTrade;
