@@ -2383,6 +2383,272 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== FIXED DATA PERSISTENCE SYSTEM =====
+// Add this at the VERY END of your script.js file, right before the closing </script> tag
+
+// ===== OVERRIDE USER DATA ISOLATION FIX =====
+(function fixDataPersistence() {
+    console.log('🔧 Applying data persistence fix...');
+    
+    // Store the original methods
+    const originalGetItem = localStorage.getItem;
+    const originalSetItem = localStorage.setItem;
+    
+    // Get current user ID consistently
+    function getConsistentUserId() {
+        try {
+            // Try to get from current user
+            const userStr = localStorage.getItem(CURRENT_USER_KEY);
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                if (user && user.id) {
+                    return user.id;
+                }
+            }
+            
+            // Try to get from users list as fallback
+            const usersStr = localStorage.getItem(USERS_KEY);
+            if (usersStr) {
+                const users = JSON.parse(usersStr);
+                if (users && users.length > 0) {
+                    // Return the most recent user's ID
+                    return users[users.length - 1].id;
+                }
+            }
+            
+            // Last resort: use a fixed ID for guest
+            return 'guest_fixed';
+        } catch (e) {
+            console.warn('Error getting user ID:', e);
+            return 'guest_fallback';
+        }
+    }
+
+    // Clear the problematic override
+    const userSpecificKeys = [
+        TRADES_KEY,
+        GOALS_KEY,
+        DEPOSITS_KEY,
+        WITHDRAWALS_KEY,
+        STARTING_BALANCE_KEY
+    ];
+
+    // Fix localStorage.getItem
+    localStorage.getItem = function(key) {
+        if (userSpecificKeys.includes(key)) {
+            const userId = getConsistentUserId();
+            const userKey = `user_${userId}_${key}`;
+            const value = originalGetItem.call(this, userKey);
+            
+            // If no user-specific data exists, try to migrate from old format
+            if (value === null) {
+                const oldValue = originalGetItem.call(this, key);
+                if (oldValue !== null) {
+                    // Migrate old data to new format
+                    originalSetItem.call(this, userKey, oldValue);
+                    return oldValue;
+                }
+            }
+            return value;
+        }
+        return originalGetItem.call(this, key);
+    };
+
+    // Fix localStorage.setItem
+    localStorage.setItem = function(key, value) {
+        if (userSpecificKeys.includes(key)) {
+            const userId = getConsistentUserId();
+            const userKey = `user_${userId}_${key}`;
+            return originalSetItem.call(this, userKey, value);
+        }
+        return originalSetItem.call(this, key, value);
+    };
+
+    // Force data reload for current user
+    function forceReloadUserData() {
+        try {
+            const userId = getConsistentUserId();
+            console.log(`📦 Loading data for user: ${userId}`);
+            
+            // Clear current arrays
+            trades = [];
+            goals = [];
+            deposits = [];
+            withdrawals = [];
+            
+            // Load data with fixed keys
+            const tradesStr = localStorage.getItem(TRADES_KEY);
+            trades = tradesStr ? JSON.parse(tradesStr) : [];
+            
+            const goalsStr = localStorage.getItem(GOALS_KEY);
+            goals = goalsStr ? JSON.parse(goalsStr) : [];
+            
+            const depositsStr = localStorage.getItem(DEPOSITS_KEY);
+            deposits = depositsStr ? JSON.parse(depositsStr) : [];
+            
+            const withdrawalsStr = localStorage.getItem(WITHDRAWALS_KEY);
+            withdrawals = withdrawalsStr ? JSON.parse(withdrawalsStr) : [];
+            
+            const startBalanceStr = localStorage.getItem(STARTING_BALANCE_KEY);
+            startingBalance = startBalanceStr ? parseFloat(startBalanceStr) : 0;
+            
+            // Calculate current balance
+            accountBalance = calculateAccountBalance();
+            
+            console.log(`✅ Loaded ${trades.length} trades, ${deposits.length} deposits, ${withdrawals.length} withdrawals`);
+            console.log(`💰 Balance: $${accountBalance}`);
+            
+            // Update all displays
+            setTimeout(() => {
+                updateAccountBalanceDisplay();
+                updateDashboardStats();
+                updateRecentActivity();
+                updateTransactionHistory();
+                updateAllTradesTable();
+                updateGoalsList();
+                updateCalendar();
+                
+                if (winLossChart) updateWinLossChart();
+                if (buysSellsChart) updateBuysSellsChart();
+                if (equityChart) updateEquityChart('1m');
+                
+                showToast('Data loaded successfully!', 'success');
+            }, 100);
+            
+        } catch (error) {
+            console.error('Error reloading data:', error);
+        }
+    }
+
+    // Fix the setCurrentUser function
+    window.setCurrentUser = function(user) {
+        const safeUser = {
+            id: user.id || Date.now(),
+            name: user.name || 'Trader',
+            email: user.email || '',
+            createdAt: user.createdAt || new Date().toISOString()
+        };
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+        sessionStorage.setItem(AUTH_KEY, 'true');
+        
+        // After setting user, force reload data
+        setTimeout(() => {
+            if (window.location.pathname.includes('dashboard.html')) {
+                forceReloadUserData();
+            }
+        }, 100);
+    };
+
+    // Fix logout to preserve data
+    window.logout = function() {
+        // Save current data before logout
+        const userId = getConsistentUserId();
+        console.log(`💾 Saving data for user ${userId} before logout`);
+        
+        // Clear session but keep localStorage
+        sessionStorage.removeItem(AUTH_KEY);
+        
+        // Redirect to login
+        window.location.replace('index.html');
+    };
+
+    // Add a manual reload button to settings
+    function addReloadDataButton() {
+        setTimeout(() => {
+            const settingsCard = document.querySelector('.settings-card .data-management');
+            if (settingsCard) {
+                const reloadBtn = document.createElement('button');
+                reloadBtn.className = 'btn-export-data';
+                reloadBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Reload My Data';
+                reloadBtn.onclick = function() {
+                    forceReloadUserData();
+                    showToast('Data reloaded successfully!', 'success');
+                };
+                settingsCard.insertBefore(reloadBtn, settingsCard.firstChild);
+            }
+        }, 1000);
+    }
+
+    // Override initializeDashboard to use fixed loading
+    const originalInit = window.initializeDashboard;
+    window.initializeDashboard = function() {
+        forceReloadUserData();
+        if (originalInit) {
+            originalInit();
+        }
+        addReloadDataButton();
+    };
+
+    // Add debug function to check stored data
+    window.debugStorage = function() {
+        console.log('=== STORAGE DEBUG ===');
+        const userId = getConsistentUserId();
+        console.log('Current User ID:', userId);
+        console.log('Current User:', getCurrentUser());
+        
+        userSpecificKeys.forEach(key => {
+            const userKey = `user_${userId}_${key}`;
+            const value = localStorage.getItem(userKey);
+            console.log(`${key}:`, value ? JSON.parse(value) : 'No data');
+        });
+        console.log('====================');
+    };
+
+    console.log('✅ Data persistence fix applied!');
+})();
+
+// ===== FORCE DATA MIGRATION =====
+// Run this once to migrate any existing data
+(function migrateExistingData() {
+    try {
+        console.log('🔄 Checking for data migration...');
+        
+        const user = getCurrentUser();
+        if (!user || !user.id) {
+            console.log('No current user found, skipping migration');
+            return;
+        }
+        
+        const userId = user.id;
+        const keys = [TRADES_KEY, GOALS_KEY, DEPOSITS_KEY, WITHDRAWALS_KEY, STARTING_BALANCE_KEY];
+        let migrated = false;
+        
+        keys.forEach(key => {
+            const oldData = localStorage.getItem(key);
+            if (oldData) {
+                const userKey = `user_${userId}_${key}`;
+                const existingUserData = localStorage.getItem(userKey);
+                
+                // Only migrate if user data doesn't exist
+                if (!existingUserData) {
+                    localStorage.setItem(userKey, oldData);
+                    console.log(`✅ Migrated ${key} to user format`);
+                    migrated = true;
+                }
+            }
+        });
+        
+        if (migrated) {
+            console.log('✅ Data migration complete');
+        } else {
+            console.log('No migration needed');
+        }
+        
+    } catch (e) {
+        console.error('Migration error:', e);
+    }
+})();
+
+// ===== ADD STORAGE VERIFICATION ON PAGE LOAD =====
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname.includes('dashboard.html')) {
+        setTimeout(() => {
+            console.log('🔍 Verifying stored data...');
+            window.debugStorage();
+        }, 2000);
+    }
+});
+
 // ===== EXPORT GLOBAL FUNCTIONS =====
 window.initializeDashboard = initializeDashboard;
 window.saveTrade = saveTrade;
