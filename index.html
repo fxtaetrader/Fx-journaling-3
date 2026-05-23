@@ -1895,8 +1895,350 @@ function handleRegister() {
         alert(result.message);
     }
 }
-        // Import the functions you need from the SDKs you need import { initializeApp } from "firebase/app"; // TODO: Add SDKs for Firebase products that you want to use // https://firebase.google.com/docs/web/setup#available-libraries // Your web app's Firebase configuration const firebaseConfig = { apiKey: "AIzaSyA9bTrwsvbKqEEbnm6YTK0g0pWRR7_jzGM", authDomain: "fx-journaling-3.firebaseapp.com", projectId: "fx-journaling-3", storageBucket: "fx-journaling-3.firebasestorage.app", messagingSenderId: "850320474123", appId: "1:850320474123:web:e450b68484a3453b36c70e" }; // Initialize Firebase const app = initializeApp(firebaseConfig);
- 
-    </script>
+   <!-- ============================================ -->
+<!-- FIREBASE INTEGRATION FOR LOGIN PAGE          -->
+<!-- ============================================ -->
+<script type="module">
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { 
+        getFirestore, 
+        collection, 
+        addDoc, 
+        getDocs, 
+        query, 
+        where,
+        Timestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    
+    // Your Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyA9bTrwsvbKqEEbnm6YTK0g0pWRR7_jzGM",
+        authDomain: "fx-journaling-3.firebaseapp.com",
+        projectId: "fx-journaling-3",
+        storageBucket: "fx-journaling-3.firebasestorage.app",
+        messagingSenderId: "850320474123",
+        appId: "1:850320474123:web:e450b68484a3453b36c70e"
+    };
+    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    
+    console.log("🔥 Firebase initialized on login page!");
+    
+    // ============================================
+    // FIREBASE USER MANAGEMENT
+    // ============================================
+    
+    // Save user to Firebase
+    async function saveUserToFirebase(user) {
+        try {
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", user.email));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                // User doesn't exist, create new
+                await addDoc(usersRef, {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    password: user.password,
+                    createdAt: Timestamp.fromDate(new Date(user.createdAt))
+                });
+                console.log(`✅ User ${user.email} saved to Firebase`);
+                return { success: true };
+            } else {
+                console.log(`📧 User ${user.email} already exists in Firebase`);
+                return { success: false, message: "Email already registered" };
+            }
+        } catch (error) {
+            console.error("❌ Firebase save error:", error);
+            return { success: false, message: "Firebase error" };
+        }
+    }
+    
+    // Authenticate user from Firebase
+    async function authenticateUserFromFirebase(email, password) {
+        try {
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const userDoc = querySnapshot.docs[0];
+                const userData = userDoc.data();
+                
+                if (userData.password === password) {
+                    console.log(`✅ User ${email} authenticated from Firebase`);
+                    return {
+                        success: true,
+                        user: {
+                            id: userData.id,
+                            name: userData.name,
+                            email: userData.email,
+                            createdAt: userData.createdAt?.toDate?.() || new Date()
+                        }
+                    };
+                } else {
+                    return { success: false, message: "Invalid password" };
+                }
+            } else {
+                return { success: false, message: "Email not registered" };
+            }
+        } catch (error) {
+            console.error("❌ Firebase auth error:", error);
+            return { success: false, message: "Firebase error" };
+        }
+    }
+    
+    // Get user data from Firebase by email
+    async function getUserFromFirebase(email) {
+        try {
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const userData = querySnapshot.docs[0].data();
+                return {
+                    id: userData.id,
+                    name: userData.name,
+                    email: userData.email,
+                    createdAt: userData.createdAt?.toDate?.() || new Date()
+                };
+            }
+            return null;
+        } catch (error) {
+            console.error("❌ Firebase get user error:", error);
+            return null;
+        }
+    }
+    
+    // Sync local users to Firebase
+    async function syncLocalUsersToFirebase() {
+        const localUsers = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
+        
+        for (const user of localUsers) {
+            await saveUserToFirebase(user);
+        }
+        
+        console.log(`🔄 Synced ${localUsers.length} local users to Firebase`);
+    }
+    
+    // Load users from Firebase to localStorage
+    async function loadUsersFromFirebase() {
+        try {
+            const usersRef = collection(db, "users");
+            const querySnapshot = await getDocs(usersRef);
+            
+            const firebaseUsers = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                firebaseUsers.push({
+                    id: data.id,
+                    name: data.name,
+                    email: data.email,
+                    password: data.password,
+                    createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+                });
+            });
+            
+            if (firebaseUsers.length > 0) {
+                const localUsers = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
+                
+                // Merge users
+                firebaseUsers.forEach(fbUser => {
+                    if (!localUsers.some(u => u.email === fbUser.email)) {
+                        localUsers.push(fbUser);
+                    }
+                });
+                
+                localStorage.setItem('fxTaeUsers', JSON.stringify(localUsers));
+                console.log(`📥 Loaded ${firebaseUsers.length} users from Firebase to localStorage`);
+            }
+            
+            return firebaseUsers;
+        } catch (error) {
+            console.error("❌ Firebase load error:", error);
+            return [];
+        }
+    }
+    
+    // ============================================
+    // OVERRIDE EXISTING FUNCTIONS
+    // ============================================
+    
+    // Store original functions
+    const originalSaveUser = window.saveUser;
+    const originalLoginValidation = window.enhancedLoginValidation;
+    
+    // Override saveUser to also save to Firebase
+    window.saveUser = async function(user) {
+        const users = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
+        
+        if (users.some(u => u.email === user.email)) {
+            return { success: false, message: 'Email already registered' };
+        }
+        
+        users.push(user);
+        localStorage.setItem('fxTaeUsers', JSON.stringify(users));
+        
+        // Save to Firebase
+        const firebaseResult = await saveUserToFirebase(user);
+        
+        return { success: true, user };
+    };
+    
+    // Override login to check Firebase first
+    window.enhancedLoginValidation = async function(email, password) {
+        // First try Firebase
+        const firebaseResult = await authenticateUserFromFirebase(email, password);
+        
+        if (firebaseResult.success) {
+            return firebaseResult;
+        }
+        
+        // Fallback to localStorage
+        const users = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
+        const localUser = users.find(u => 
+            u.email.toLowerCase() === email.toLowerCase() && 
+            u.password === password
+        );
+        
+        if (localUser) {
+            return { success: true, user: localUser };
+        }
+        
+        const userExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+        if (userExists) {
+            return { success: false, message: 'Invalid password' };
+        }
+        
+        return { success: false, message: 'Email not registered' };
+    };
+    
+    // Override signup form submission
+    const originalSignupHandler = document.getElementById('signupForm')?.submit;
+    
+    // Add async signup handler
+    async function handleAsyncSignup(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('signupName')?.value.trim();
+        const email = document.getElementById('signupEmail')?.value.trim();
+        const password = document.getElementById('signupPassword')?.value;
+        
+        if (!name || !email || !password) {
+            showToast('Please fill all fields', 'error');
+            return;
+        }
+        
+        // Check if email already exists in Firebase
+        const existingUser = await getUserFromFirebase(email);
+        
+        if (existingUser) {
+            showToast('Email already registered. Please login.', 'error');
+            return;
+        }
+        
+        const newUser = {
+            id: Date.now(),
+            name,
+            email,
+            password,
+            createdAt: new Date().toISOString()
+        };
+        
+        const users = JSON.parse(localStorage.getItem('fxTaeUsers') || '[]');
+        users.push(newUser);
+        localStorage.setItem('fxTaeUsers', JSON.stringify(users));
+        
+        // Save to Firebase
+        await saveUserToFirebase(newUser);
+        
+        // Set current user
+        const safeUser = {
+            name: newUser.name,
+            email: newUser.email,
+            createdAt: newUser.createdAt
+        };
+        localStorage.setItem('fxTaeCurrentUser', JSON.stringify(safeUser));
+        sessionStorage.setItem('fxTaeAuthenticated', 'true');
+        
+        showToast('Account created successfully! Redirecting...', 'success');
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1500);
+    }
+    
+    // Override async login handler
+    async function handleAsyncLogin(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('loginEmail')?.value.trim();
+        const password = document.getElementById('loginPassword')?.value;
+        
+        if (!email || !password) {
+            showToast('Please fill all fields', 'error');
+            return;
+        }
+        
+        const result = await window.enhancedLoginValidation(email, password);
+        
+        if (!result.success) {
+            showToast(result.message, 'error');
+            return;
+        }
+        
+        const user = result.user;
+        
+        const safeUser = {
+            name: user.name,
+            email: user.email,
+            createdAt: user.createdAt
+        };
+        localStorage.setItem('fxTaeCurrentUser', JSON.stringify(safeUser));
+        sessionStorage.setItem('fxTaeAuthenticated', 'true');
+        
+        showToast('Login successful! Redirecting...', 'success');
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1500);
+    }
+    
+    // Replace form handlers
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    
+    if (loginForm) {
+        loginForm.removeEventListener('submit', loginForm._oldHandler);
+        loginForm._oldHandler = handleAsyncLogin;
+        loginForm.addEventListener('submit', loginForm._oldHandler);
+    }
+    
+    if (signupForm) {
+        signupForm.removeEventListener('submit', signupForm._oldHandler);
+        signupForm._oldHandler = handleAsyncSignup;
+        signupForm.addEventListener('submit', signupForm._oldHandler);
+    }
+    
+    // Auto-sync users on page load
+    async function syncUsersOnLoad() {
+        console.log("🔄 Syncing users with Firebase...");
+        await loadUsersFromFirebase();
+        console.log("✅ User sync complete!");
+    }
+    
+    // Run sync
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncUsersOnLoad);
+    } else {
+        syncUsersOnLoad();
+    }
+    
+    console.log("🔥 Firebase login integration complete!");
+</script>
    </body>
 </html>
